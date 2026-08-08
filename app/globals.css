@@ -1,26 +1,185 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #F8FAFC;
+  --white: #FFFFFF;
+  --primary: #7C3AED;
+  --primary-light: #F3E8FF;
+  --primary-dark: #6D28D9;
+  --text: #111827;
+  --text-secondary: #6B7280;
+  --border: #E5E7EB;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  --info: #3B82F6;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.4); }
+  70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(124, 58, 237, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Chart container responsive */
+.chart-container {
+  position: relative;
+  width: 100%;
+}
+
+/* Calendar */
+.calendar-day-has-task {
+  position: relative;
+}
+.calendar-day-has-task::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--primary);
+}
+
+/* Status badges */
+.badge-pending { background: #FEF3C7; color: #92400E; }
+.badge-completed { background: #D1FAE5; color: #065F46; }
+.badge-overdue { background: #FEE2E2; color: #991B1B; }
+.badge-cancelled { background: #F3F4F6; color: #374151; }
+.badge-in-progress { background: #DBEAFE; color: #1E40AF; }
+
+/* Priority badges */
+.badge-high { background: #FEE2E2; color: #991B1B; }
+.badge-medium { background: #FEF3C7; color: #92400E; }
+.badge-low { background: #D1FAE5; color: #065F46; }
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Modal backdrop blur */
+.modal-backdrop {
+  backdrop-filter: blur(4px);
+}
+
+/* Glass card */
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* No select on interactive elements */
+button, a {
+  user-select: none;
+}
+
+/* Prevent horizontal overflow on mobile */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
+}
+
+/* Safe area bottom padding for mobile nav */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Responsive table — convert to card layout on mobile */
+@media (max-width: 639px) {
+  .responsive-table thead {
+    display: none;
+  }
+  .responsive-table tbody tr {
+    display: block;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+    background: #fff;
+  }
+  .responsive-table tbody td {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    border: none;
+    font-size: 0.875rem;
+  }
+  .responsive-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6B7280;
+    min-width: 90px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+}
+
+/* Ensure charts respect container width */
+canvas {
+  max-width: 100% !important;
+}
+
+/* Improve tap target sizes on mobile */
+@media (max-width: 768px) {
+  button, a, [role="button"] {
+    min-height: 36px;
+  }
+}
+
+/* Fix text overflow on small screens */
+.truncate-mobile {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
