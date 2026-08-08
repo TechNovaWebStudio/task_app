@@ -33,6 +33,8 @@ export default function TasksPage() {
     sortBy: 'createdAt',
     order: 'desc'
   });
+  const [dateView, setDateView] = useState('today');
+  const [customDate, setCustomDate] = useState('');
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState([]);
   
@@ -57,6 +59,22 @@ export default function TasksPage() {
       
       const params = { page, limit: 10, ...filters };
       if (currentSearch) params.search = currentSearch;
+      
+      // Date View Logic
+      if (dateView === 'today') {
+        const d = new Date();
+        params.date = d.toISOString().split('T')[0];
+      } else if (dateView === 'tomorrow') {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        params.date = d.toISOString().split('T')[0];
+      } else if (dateView === 'upcoming') {
+        const d = new Date();
+        d.setDate(d.getDate() + 2);
+        params.dateFrom = d.toISOString().split('T')[0];
+      } else if (dateView === 'custom' && customDate) {
+        params.date = customDate;
+      }
       
       // Clean up empty filters
       Object.keys(params).forEach(key => {
@@ -101,7 +119,7 @@ export default function TasksPage() {
     const handleTasksChanged = () => fetchTasks();
     window.addEventListener('tasks-changed', handleTasksChanged);
     return () => window.removeEventListener('tasks-changed', handleTasksChanged);
-  }, [page, filters, search]);
+  }, [page, filters, search, dateView, customDate]);
 
   const handleSearchChange = (e) => {
     const value = e.target.value;
@@ -135,13 +153,14 @@ export default function TasksPage() {
   };
 
   // Handlers
-  const handleComplete = async (id, isCompleting) => {
+  const handleComplete = async (id, isCompleting, dateStr = null) => {
     try {
+      const payload = dateStr ? { date: dateStr } : {};
       if (isCompleting) {
-        await taskApi.completeTask(id);
+        await taskApi.completeTask(id, payload);
         toast.success('Task marked as completed');
       } else {
-        await taskApi.pendingTask(id);
+        await taskApi.pendingTask(id, payload);
         toast.success('Task marked as pending');
       }
       fetchTasks();
@@ -255,6 +274,11 @@ export default function TasksPage() {
               </div>
               <TaskCard
                 task={task}
+                currentDateView={
+                  dateView === 'today' ? new Date().toISOString().split('T')[0] : 
+                  dateView === 'tomorrow' ? (() => {const d=new Date(); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0]})() : 
+                  dateView === 'custom' ? customDate : null
+                }
                 onView={(t) => { setDetailsTask(t); setShowDetailsModal(true); }}
                 onEdit={(t) => { setEditTask(t); setShowEditModal(true); }}
                 onDelete={(id) => { setDeleteTaskId(id); setShowDeleteModal(true); }}
@@ -271,12 +295,22 @@ export default function TasksPage() {
         tasks={tasks}
         loading={loading}
         selectedIds={selectedIds}
+        currentDateView={
+          dateView === 'today' ? new Date().toISOString().split('T')[0] : 
+          dateView === 'tomorrow' ? (() => {const d=new Date(); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0]})() : 
+          dateView === 'custom' ? customDate : null
+        }
         onSelectAll={toggleSelectAll}
         onSelectOne={toggleSelectOne}
         onView={(t) => { setDetailsTask(t); setShowDetailsModal(true); }}
         onEdit={(t) => { setEditTask(t); setShowEditModal(true); }}
         onDelete={(id) => { setDeleteTaskId(id); setShowDeleteModal(true); }}
-        onComplete={handleComplete}
+        onComplete={(id, isComp) => {
+          const dateStr = dateView === 'today' ? new Date().toISOString().split('T')[0] : 
+                          dateView === 'tomorrow' ? (() => {const d=new Date(); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0]})() : 
+                          dateView === 'custom' ? customDate : null;
+          handleComplete(id, isComp, dateStr);
+        }}
       />
     );
   };
@@ -325,10 +359,10 @@ export default function TasksPage() {
           
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors shadow-sm flex items-center gap-2 font-medium"
+            className="hidden sm:flex px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors shadow-sm items-center gap-2 font-medium"
           >
             <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">Add Task</span>
+            <span>Add Task</span>
           </button>
         </div>
       </div>
@@ -466,6 +500,36 @@ export default function TasksPage() {
         )}
       </div>
 
+      {/* Date Filters */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar w-full">
+        {['today', 'tomorrow', 'upcoming', 'all'].map((view) => (
+          <button
+            key={view}
+            onClick={() => { setDateView(view); setPage(1); }}
+            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+              dateView === view 
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-200' 
+                : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+            }`}
+          >
+            {view.charAt(0).toUpperCase() + view.slice(1)}
+          </button>
+        ))}
+        
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-2 py-1 ml-auto">
+          <input
+            type="date"
+            value={customDate}
+            onChange={(e) => { 
+              setCustomDate(e.target.value); 
+              setDateView('custom'); 
+              setPage(1); 
+            }}
+            className="text-sm border-none focus:ring-0 outline-none p-1 text-gray-700"
+          />
+        </div>
+      </div>
+
       {/* Main Content */}
       <div className="min-h-[400px]">
         {renderContent()}
@@ -528,6 +592,14 @@ export default function TasksPage() {
           onClose={() => { setShowDeleteModal(false); setDeleteTaskId(null); }}
         />
       )}
+
+      {/* Mobile FAB */}
+      <button
+        onClick={() => setShowAddModal(true)}
+        className="sm:hidden fixed bottom-20 right-6 z-40 w-14 h-14 bg-purple-600 text-white rounded-full shadow-lg shadow-purple-300 flex items-center justify-center hover:bg-purple-700 transition-transform active:scale-95"
+      >
+        <Plus className="w-7 h-7" />
+      </button>
     </div>
   );
 }

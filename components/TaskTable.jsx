@@ -6,7 +6,7 @@ import { Eye, Edit2, Trash2, Calendar, CheckSquare, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TaskCard from './TaskCard';
 
-export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete, selectedIds = [], onSelectAll, onSelectOne, loading }) {
+export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete, selectedIds = [], onSelectAll, onSelectOne, loading, currentDateView }) {
   if (loading) {
     return (
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm h-64 flex items-center justify-center">
@@ -33,7 +33,8 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
             onView={onView} 
             onEdit={onEdit} 
             onDelete={onDelete} 
-            onComplete={onComplete} 
+            onComplete={onComplete}
+            currentDateView={currentDateView}
           />
         ))}
       </div>
@@ -66,12 +67,20 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
             <tbody className="divide-y divide-gray-100">
               <AnimatePresence>
                 {tasks.map((task) => {
-                  const isCompleted = task.status === 'completed';
+                  const isCompleted = task.status === 'completed' || (currentDateView && task.completedDates?.includes(currentDateView));
                   const isSelected = selectedIds.includes(task._id);
                   let dueText = '-';
                   let isOverdue = false;
                   
-                  if (task.dueDate) {
+                  if (task.dates && task.dates.length > 0) {
+                    if (task.dates.length === 1) {
+                      const dDate = new Date(task.dates[0]);
+                      dueText = isToday(dDate) ? 'Today' : format(dDate, 'MMM d, yyyy');
+                      if (!isCompleted && isPast(dDate) && !isToday(dDate)) isOverdue = true;
+                    } else {
+                      dueText = `${task.dates.length} scheduled dates`;
+                    }
+                  } else if (task.dueDate) {
                     const dDate = new Date(task.dueDate);
                     dueText = isToday(dDate) ? 'Today' : format(dDate, 'MMM d, yyyy');
                     if (!isCompleted && isPast(dDate) && !isToday(dDate)) {
@@ -114,6 +123,20 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
                                 {task.description}
                               </div>
                             )}
+                            {task.tags && task.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {task.tags.slice(0, 3).map(tag => (
+                                  <span key={tag} className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-50 text-purple-700">
+                                    {tag}
+                                  </span>
+                                ))}
+                                {task.tags.length > 3 && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">
+                                    +{task.tags.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -132,7 +155,7 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {task.dueDate && (
+                        {(task.dates?.length > 0 || task.dueDate) && (
                           <div className={`flex items-center text-xs ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
                             <Calendar className="w-3.5 h-3.5 mr-1.5" />
                             {dueText}
