@@ -67,7 +67,7 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onEdit, onComp
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-4">
-                {task.dueDate && (
+                {(task.dueDate && (!task.dates || task.dates.length === 0)) && (
                   <div className="flex items-center text-sm">
                     <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center mr-3">
                       <Calendar className="w-4 h-4 text-blue-600" />
@@ -128,6 +128,36 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onEdit, onComp
                 )}
               </div>
             </div>
+
+            {task.dates && task.dates.length > 0 && (
+              <div className="mb-6 border-t border-gray-100 pt-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <Calendar className="w-4 h-4 mr-2 text-gray-400" /> Scheduled Dates
+                </h3>
+                <div className="space-y-3">
+                  {task.dates.map((date) => {
+                    const isDateCompleted = task.completedDates && task.completedDates.includes(date);
+                    return (
+                      <div key={date} className="flex items-center gap-3">
+                        <button
+                          onClick={() => onComplete(task._id, !isDateCompleted, date)}
+                          className="focus:outline-none flex-shrink-0"
+                        >
+                          {isDateCompleted ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                          ) : (
+                            <div className="w-5 h-5 rounded-full border-2 border-gray-300 hover:border-purple-500 transition-colors" />
+                          )}
+                        </button>
+                        <span className={`text-sm font-medium ${isDateCompleted ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                          {format(new Date(date), 'MMM d, yyyy')}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {task.tags && task.tags.length > 0 && (
               <div className="mb-6 border-t border-gray-100 pt-6">

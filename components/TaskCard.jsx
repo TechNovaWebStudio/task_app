@@ -76,14 +76,14 @@ export default function TaskCard({ task, currentDateView, onView, onEdit, onDele
             
             {(task.dates?.length > 0 || task.dueDate) && (
               <div className={`flex items-center text-xs ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
-                <Calendar className="w-3.5 h-3.5 mr-1" />
+                <Calendar className="w-3.5 h-3.5 mr-1 text-gray-400" />
                 {dueText}
               </div>
             )}
             
             {task.dueTime && (
-              <div className="flex items-center text-xs text-gray-500">
-                <Clock className="w-3.5 h-3.5 mr-1" />
+              <div className="flex items-center text-xs font-medium text-gray-700 bg-gray-100/80 px-2 py-1 rounded-md">
+                <Clock className="w-3.5 h-3.5 mr-1 text-purple-500" />
                 {task.dueTime}
               </div>
             )}

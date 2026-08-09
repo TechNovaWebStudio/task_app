@@ -64,6 +64,10 @@ export default function TasksPage() {
       if (dateView === 'today') {
         const d = new Date();
         params.date = d.toISOString().split('T')[0];
+        if (params.sortBy === 'createdAt') {
+          params.sortBy = 'dueTime';
+          params.order = 'asc';
+        }
       } else if (dateView === 'tomorrow') {
         const d = new Date();
         d.setDate(d.getDate() + 1);
@@ -240,21 +244,25 @@ export default function TasksPage() {
     }
 
     if (tasks.length === 0) {
+      let emptyTitle = "No tasks found";
+      let emptyDesc = Object.values(filters).some(v => v && v !== 'createdAt' && v !== 'desc') || search
+        ? "Try adjusting your filters or search terms." 
+        : "Get started by creating your first task.";
+        
+      if (dateView === 'today' && !search && !Object.values(filters).some(v => v && v !== 'createdAt' && v !== 'desc')) {
+        emptyTitle = "No tasks for today";
+        emptyDesc = "You have a free schedule today.";
+      } else if ((dateView === 'tomorrow' || dateView === 'custom') && !search && !Object.values(filters).some(v => v && v !== 'createdAt' && v !== 'desc')) {
+        emptyTitle = "No tasks scheduled for this date.";
+        emptyDesc = "";
+      }
+
       return (
         <EmptyState 
-          title="No tasks found" 
-          description={Object.values(filters).some(v => v) || search 
-            ? "Try adjusting your filters or search terms." 
-            : "Get started by creating your first task."}
-          action={
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors inline-flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Add Task
-            </button>
-          }
+          title={emptyTitle} 
+          description={emptyDesc}
+          actionLabel="Add Task"
+          onAction={() => setShowAddModal(true)}
         />
       );
     }
