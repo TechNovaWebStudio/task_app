@@ -18,7 +18,6 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
       title: '',
       description: '',
       dates: [],
-      dueTime: '',
       tags: []
     }
   });
@@ -26,14 +25,13 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
   useEffect(() => {
     if (editTask) {
       const initialDates = editTask.dates && editTask.dates.length > 0 
-        ? editTask.dates.map(d => d.date || d)
-        : (editTask.dueDate ? [new Date(editTask.dueDate).toISOString().split('T')[0]] : []);
+        ? editTask.dates.map(d => typeof d === 'string' ? { date: d, time: '' } : { date: d.date, time: d.time || '' })
+        : (editTask.dueDate ? [{ date: new Date(editTask.dueDate).toISOString().split('T')[0], time: editTask.dueTime || '' }] : []);
       
       reset({
         title: editTask.title,
         description: editTask.description,
         dates: initialDates,
-        dueTime: editTask.dueTime || '',
         tags: editTask.tags || [],
       });
     } else {
@@ -47,9 +45,9 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
         ...formData,
       };
 
-      // Fallback for dueDate backward compatibility if we want it, but dates array is primary now.
       if (payload.dates && payload.dates.length > 0) {
-        payload.dueDate = payload.dates[0];
+        payload.dueDate = payload.dates[0].date;
+        payload.dueTime = payload.dates[0].time;
       }
 
       if (editTask) {
@@ -167,21 +165,7 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
                 </div>
 
 
-                
-                {/* Due Time */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Time</label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      {...register('dueTime')}
-                      type="time"
-                      className="w-full pl-10 pr-4 py-3 sm:py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
-                    />
-                  </div>
                 </div>
-
-              </div>
 
               {/* Footer */}
               <div className="flex-shrink-0 flex gap-3 px-5 py-4 sm:border-t border-gray-100 bg-white sm:bg-gray-50 pb-safe pb-8 sm:pb-4">

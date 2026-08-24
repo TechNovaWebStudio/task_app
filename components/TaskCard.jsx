@@ -11,6 +11,22 @@ export default function TaskCard({ task, currentDateView, onView, onEdit, onDele
   // Format dates
   let dueText = 'No date';
   let isOverdue = false;
+  let occurrenceTime = null;
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isFuture = currentDateView && currentDateView > todayStr;
+  const isCompletionDisabled = isFuture;
+  
+  if (task.dates && task.dates.length > 0) {
+    if (currentDateView) {
+      const occurrence = task.dates.find(d => (d.date || d) === currentDateView);
+      if (occurrence && occurrence.time) occurrenceTime = occurrence.time;
+    } else {
+      occurrenceTime = task.dates[0].time;
+    }
+  } else {
+    occurrenceTime = task.dueTime;
+  }
   
   if (task.dates && task.dates.length > 0) {
     if (task.dates.length === 1) {
@@ -37,13 +53,15 @@ export default function TaskCard({ task, currentDateView, onView, onEdit, onDele
     >
       <div className="flex gap-3">
         <button 
-          onClick={() => onComplete(task._id, !isCompleted, currentDateView)}
-          className="mt-0.5 flex-shrink-0 focus:outline-none"
+          onClick={() => !isCompletionDisabled && onComplete(task._id, !isCompleted, currentDateView)}
+          disabled={isCompletionDisabled}
+          className={`mt-0.5 flex-shrink-0 focus:outline-none ${isCompletionDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          title={isCompletionDisabled ? "Cannot complete future tasks" : ""}
         >
           {isCompleted ? (
             <CheckCircle2 className="w-6 h-6 text-emerald-500" />
           ) : (
-            <Circle className="w-6 h-6 text-gray-300 hover:text-purple-500 transition-colors" />
+            <Circle className={`w-6 h-6 transition-colors ${isCompletionDisabled ? 'text-gray-200' : 'text-gray-300 hover:text-purple-500'}`} />
           )}
         </button>
         
@@ -70,10 +88,10 @@ export default function TaskCard({ task, currentDateView, onView, onEdit, onDele
           )}
 
           <div className="flex flex-wrap items-center gap-2 mt-3 text-sm">
-            {task.dueTime && (
+            {occurrenceTime && (
               <div className="flex items-center font-medium text-gray-700 bg-gray-100/80 px-2 py-1 rounded-md">
                 <Clock className="w-4 h-4 mr-1.5 text-purple-500" />
-                {task.dueTime}
+                {occurrenceTime}
               </div>
             )}
             

@@ -71,6 +71,22 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
                   let dueText = '-';
                   let isOverdue = false;
                   
+                  const todayStr = new Date().toISOString().split('T')[0];
+                  const isFuture = currentDateView && currentDateView > todayStr;
+                  const isCompletionDisabled = isFuture;
+
+                  let occurrenceTime = null;
+                  if (task.dates && task.dates.length > 0) {
+                    if (currentDateView) {
+                      const occurrence = task.dates.find(d => (d.date || d) === currentDateView);
+                      if (occurrence && occurrence.time) occurrenceTime = occurrence.time;
+                    } else {
+                      occurrenceTime = task.dates[0].time;
+                    }
+                  } else {
+                    occurrenceTime = task.dueTime;
+                  }
+                  
                   if (task.dates && task.dates.length > 0) {
                     if (task.dates.length === 1) {
                       const dDate = new Date(task.dates[0].date || task.dates[0]);
@@ -106,12 +122,14 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
                       <td className="px-6 py-4">
                         <div className="flex items-start gap-3 max-w-md">
                           <button 
-                            onClick={() => onComplete(task._id, !isCompleted)}
+                            onClick={() => !isCompletionDisabled && onComplete(task._id, !isCompleted)}
+                            disabled={isCompletionDisabled}
+                            title={isCompletionDisabled ? "Cannot complete future tasks" : ""}
                             className={`mt-0.5 flex-shrink-0 rounded-md border ${
                               isCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 text-transparent hover:border-purple-500'
-                            } w-5 h-5 flex items-center justify-center transition-colors`}
+                            } ${isCompletionDisabled ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''} w-5 h-5 flex items-center justify-center transition-colors`}
                           >
-                            <CheckSquare className="w-3.5 h-3.5" />
+                            <CheckSquare className={`w-3.5 h-3.5 ${isCompletionDisabled && !isCompleted ? 'text-gray-300' : ''}`} />
                           </button>
                           <div>
                             <div className={`font-medium text-gray-900 ${isCompleted ? 'line-through text-gray-400' : ''} truncate`}>
@@ -140,10 +158,10 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {task.dueTime ? (
+                        {occurrenceTime ? (
                           <div className="flex items-center text-xs font-medium text-gray-700 bg-gray-100/80 px-2 py-1 rounded-md max-w-fit">
                             <Clock className="w-3.5 h-3.5 mr-1 text-purple-500" />
-                            {task.dueTime}
+                            {occurrenceTime}
                           </div>
                         ) : (
                           <span className="text-gray-400">-</span>

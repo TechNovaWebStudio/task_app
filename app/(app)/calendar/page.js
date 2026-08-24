@@ -309,10 +309,10 @@ export default function CalendarPage() {
                         </div>
                         
                         <div className="flex flex-wrap items-center gap-2 mt-2">
-                          {task.dueTime && (
+                          {(task.currentOccurrence?.time || task.dueTime) && (
                             <span className="flex items-center gap-1 text-[11px] text-gray-500 font-medium">
                               <Clock className="w-3 h-3" />
-                              {task.dueTime}
+                              {task.currentOccurrence?.time || task.dueTime}
                             </span>
                           )}
                         </div>
