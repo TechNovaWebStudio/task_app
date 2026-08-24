@@ -17,14 +17,9 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
     defaultValues: {
       title: '',
       description: '',
-      category: 'Personal',
-      priority: 'medium',
-      status: 'pending',
       dates: [],
       dueTime: '',
-      estimatedDuration: '',
-      tags: [],
-      notes: ''
+      tags: []
     }
   });
 
@@ -37,17 +32,12 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
       reset({
         title: editTask.title,
         description: editTask.description,
-        category: editTask.category || 'Personal',
-        priority: editTask.priority || 'medium',
-        status: editTask.status || 'pending',
         dates: initialDates,
         dueTime: editTask.dueTime || '',
-        estimatedDuration: editTask.estimatedDuration || '',
-        notes: editTask.notes || '',
         tags: editTask.tags || [],
       });
     } else {
-      reset({ priority: 'medium', status: 'pending', tags: [], dates: [], category: 'Personal' });
+      reset({ tags: [], dates: [] });
     }
   }, [editTask, isOpen, reset]);
 
@@ -55,7 +45,6 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
     try {
       const payload = {
         ...formData,
-        estimatedDuration: formData.estimatedDuration ? parseInt(formData.estimatedDuration, 10) : 0,
       };
 
       // Fallback for dueDate backward compatibility if we want it, but dates array is primary now.
@@ -177,65 +166,7 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
                   </div>
                 </div>
 
-                {/* Row: Category + Priority */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Category</label>
-                    <div className="relative">
-                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <select
-                        {...register('category')}
-                        className="w-full pl-10 pr-4 py-3 sm:py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 appearance-none bg-white transition-all"
-                      >
-                        <option value="Personal">Personal</option>
-                        {categories.map((cat) => (
-                          <option key={cat._id} value={cat.name}>{cat.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Priority</label>
-                    <div className="relative">
-                      <Flag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <select
-                        {...register('priority')}
-                        className="w-full pl-10 pr-4 py-3 sm:py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 appearance-none bg-white transition-all"
-                      >
-                        {PRIORITIES.map((p) => (
-                          <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Row: Status + Estimated Duration */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Status</label>
-                    <select
-                      {...register('status')}
-                      className="w-full px-4 py-3 sm:py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 appearance-none bg-white transition-all"
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1).replace('-', ' ')}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Est. (min)</label>
-                    <input
-                      {...register('estimatedDuration')}
-                      type="number"
-                      min="0"
-                      placeholder="e.g. 60"
-                      className="w-full px-4 py-3 sm:py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
-                    />
-                  </div>
-                </div>
                 
                 {/* Due Time */}
                 <div>

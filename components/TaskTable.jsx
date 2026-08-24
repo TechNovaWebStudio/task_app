@@ -57,8 +57,7 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
                   </div>
                 </th>
                 <th className="px-6 py-4 font-medium">Task</th>
-                <th className="px-6 py-4 font-medium">Category</th>
-                <th className="px-6 py-4 font-medium">Priority</th>
+                <th className="px-6 py-4 font-medium">Time</th>
                 <th className="px-6 py-4 font-medium">Due Date</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium text-right">Actions</th>
@@ -141,18 +140,14 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          {task.category || 'Personal'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          task.priority === 'high' ? 'bg-red-50 text-red-700' :
-                          task.priority === 'medium' ? 'bg-amber-50 text-amber-700' :
-                          'bg-emerald-50 text-emerald-700'
-                        }`}>
-                          {task.priority || 'medium'}
-                        </span>
+                        {task.dueTime ? (
+                          <div className="flex items-center text-xs font-medium text-gray-700 bg-gray-100/80 px-2 py-1 rounded-md max-w-fit">
+                            <Clock className="w-3.5 h-3.5 mr-1 text-purple-500" />
+                            {task.dueTime}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {(task.dates?.length > 0 || task.dueDate) && (
@@ -164,13 +159,9 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          isCompleted ? 'bg-emerald-100 text-emerald-800' :
-                          task.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
-                          task.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
-                          isOverdue ? 'bg-red-100 text-red-800' :
-                          'bg-purple-100 text-purple-800'
+                          isCompleted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                         }`}>
-                          {isOverdue && !isCompleted ? 'overdue' : (task.status || 'pending')}
+                          {isCompleted ? 'Completed' : 'Non Completed'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">

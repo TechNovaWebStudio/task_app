@@ -69,22 +69,22 @@ export default function TaskCard({ task, currentDateView, onView, onEdit, onDele
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-2 mt-3">
-            {task.priority === 'high' && <span className="px-2 py-1 rounded-md text-xs font-medium bg-red-50 text-red-700">High</span>}
-            {task.priority === 'medium' && <span className="px-2 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700">Medium</span>}
-            {task.priority === 'low' && <span className="px-2 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700">Low</span>}
-            
-            {(task.dates?.length > 0 || task.dueDate) && (
-              <div className={`flex items-center text-xs ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
-                <Calendar className="w-3.5 h-3.5 mr-1 text-gray-400" />
-                {dueText}
+          <div className="flex flex-wrap items-center gap-2 mt-3 text-sm">
+            {task.dueTime && (
+              <div className="flex items-center font-medium text-gray-700 bg-gray-100/80 px-2 py-1 rounded-md">
+                <Clock className="w-4 h-4 mr-1.5 text-purple-500" />
+                {task.dueTime}
               </div>
             )}
             
-            {task.dueTime && (
-              <div className="flex items-center text-xs font-medium text-gray-700 bg-gray-100/80 px-2 py-1 rounded-md">
-                <Clock className="w-3.5 h-3.5 mr-1 text-purple-500" />
-                {task.dueTime}
+            <div className={`font-medium px-2 py-1 rounded-md ${isCompleted ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+              Status: {isCompleted ? 'Completed' : 'Non Completed'}
+            </div>
+
+            {(task.dates?.length > 0 || task.dueDate) && (
+              <div className={`flex items-center ml-auto ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                <Calendar className="w-4 h-4 mr-1 text-gray-400" />
+                {dueText}
               </div>
             )}
           </div>

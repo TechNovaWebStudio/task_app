@@ -7,11 +7,12 @@ import { Download, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import TaskCard from '@/components/TaskCard';
 
-export default function ReportsPage() {
+export default function HistoryPage() {
   const [reportData, setReportData] = useState(null);
-  const [period, setPeriod] = useState('this_week');
+  const [period, setPeriod] = useState('all_time');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedDate, setExpandedDate] = useState(null);
@@ -110,7 +111,20 @@ export default function ReportsPage() {
             <div className="divide-y divide-gray-100">
               {dailyReports.map((day) => {
                 const isExpanded = expandedDate === day.date;
-                const dayTasks = (taskDetails || []).filter(t => t.dates?.some(d => (d.date || d) === day.date));
+                let dayTasks = (taskDetails || []).filter(t => t.dates?.some(d => (d.date || d) === day.date));
+                
+                // Apply status filter
+                if (statusFilter !== 'all') {
+                  dayTasks = dayTasks.filter(t => {
+                    const occ = t.dates?.find(d => (d.date || d) === day.date);
+                    if (statusFilter === 'completed') return occ?.completed === true;
+                    if (statusFilter === 'non_completed') return occ?.completed !== true;
+                    return true;
+                  });
+                }
+                
+                // If filtering by status and no tasks match for this day, skip rendering this day
+                if (statusFilter !== 'all' && dayTasks.length === 0) return null;
 
                 return (
                   <div key={day.date} className="hover:bg-gray-50 transition-colors">
@@ -171,22 +185,32 @@ export default function ReportsPage() {
     <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto space-y-6 w-full pb-20 lg:pb-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Reports</h1>
-          <div className="text-xs sm:text-sm text-gray-500 mt-1">Dashboard &gt; Reports</div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">History</h1>
+          <div className="text-xs sm:text-sm text-gray-500 mt-1">Dashboard &gt; History</div>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
+          <select 
+            value={statusFilter} 
+            onChange={e => setStatusFilter(e.target.value)} 
+            className="bg-white border border-gray-300 text-gray-700 py-2 px-2 sm:px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm flex-1 sm:flex-none"
+          >
+            <option value="all">All Status</option>
+            <option value="completed">Completed</option>
+            <option value="non_completed">Non Completed</option>
+          </select>
+
           <select 
             value={period} 
             onChange={e => setPeriod(e.target.value)} 
             className="bg-white border border-gray-300 text-gray-700 py-2 px-2 sm:px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm flex-1 sm:flex-none"
           >
+            <option value="all_time">All History</option>
             <option value="today">Today</option>
             <option value="yesterday">Yesterday</option>
             <option value="this_week">This Week</option>
             <option value="last_week">Last Week</option>
             <option value="this_month">This Month</option>
             <option value="last_month">Last Month</option>
-            <option value="all_time">All Time</option>
             <option value="custom">Custom Date Range</option>
           </select>
           

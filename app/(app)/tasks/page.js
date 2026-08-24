@@ -28,10 +28,6 @@ export default function TasksPage() {
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({
     status: '',
-    priority: '',
-    category: '',
-    sortBy: 'createdAt',
-    order: 'desc'
   });
   const [dateView, setDateView] = useState('today');
   const [customDate, setCustomDate] = useState('');
@@ -146,10 +142,6 @@ export default function TasksPage() {
   const resetFilters = () => {
     setFilters({
       status: '',
-      priority: '',
-      category: '',
-      sortBy: 'createdAt',
-      order: 'desc'
     });
     setSearch('');
     setPage(1);
@@ -512,7 +504,7 @@ export default function TasksPage() {
           <motion.div 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
-            className="pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"
+            className="pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4"
           >
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
@@ -521,71 +513,16 @@ export default function TasksPage() {
                 onChange={(e) => handleFilterChange('status', e.target.value)}
                 className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-purple-500 focus:border-purple-500"
               >
-                <option value="">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="in-progress">In Progress</option>
+                <option value="">All</option>
+                <option value="non_completed">Non Completed</option>
                 <option value="completed">Completed</option>
-                <option value="overdue">Overdue</option>
-                <option value="cancelled">Cancelled</option>
               </select>
-            </div>
-            
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Priority</label>
-              <select
-                value={filters.priority}
-                onChange={(e) => handleFilterChange('priority', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-purple-500 focus:border-purple-500"
-              >
-                <option value="">All Priorities</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Category</label>
-              <select
-                value={filters.category}
-                onChange={(e) => handleFilterChange('category', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-purple-500 focus:border-purple-500"
-              >
-                <option value="">All Categories</option>
-                {categories.map(c => (
-                  <option key={c._id} value={c.name}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Sort By</label>
-              <div className="flex gap-2">
-                <select
-                  value={filters.sortBy}
-                  onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-purple-500 focus:border-purple-500"
-                >
-                  <option value="createdAt">Date Created</option>
-                  <option value="dueDate">Due Date</option>
-                  <option value="priority">Priority</option>
-                  <option value="title">Title</option>
-                  <option value="status">Status</option>
-                </select>
-                <button
-                  onClick={() => handleFilterChange('order', filters.order === 'asc' ? 'desc' : 'asc')}
-                  className="px-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center text-gray-600"
-                  title={filters.order === 'asc' ? "Ascending" : "Descending"}
-                >
-                  <SlidersHorizontal className={`w-4 h-4 transition-transform ${filters.order === 'asc' ? 'rotate-180' : ''}`} />
-                </button>
-              </div>
             </div>
             
             <div className="flex items-end">
               <button
                 onClick={resetFilters}
-                className="w-full px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="w-full sm:w-auto px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Reset Filters
               </button>

@@ -79,30 +79,33 @@ export default function CalendarPage() {
   // Tasks filtered for the selected date
   const dayTasks = useMemo(() => {
     if (!selectedDate) return [];
-    return tasks.filter(task => {
-      if (!task.dueDate) return false;
-      return isSameDay(new Date(task.dueDate), selectedDate);
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const filtered = [];
+    tasks.forEach(task => {
+      if (task.dates) {
+        const dMatch = task.dates.find(d => (d.date || d) === dateStr);
+        if (dMatch) {
+          filtered.push({ ...task, currentOccurrence: dMatch });
+        }
+      }
     });
+    return filtered;
   }, [tasks, selectedDate]);
+  
+  const dailyStats = useMemo(() => {
+    const total = dayTasks.length;
+    const completed = dayTasks.filter(t => t.currentOccurrence?.completed).length;
+    const nonCompleted = total - completed;
+    const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { total, completed, nonCompleted, progress };
+  }, [dayTasks]);
 
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'completed': return 'bg-emerald-500';
-      case 'overdue': return 'bg-red-500';
-      case 'in-progress': return 'bg-blue-500';
-      case 'cancelled': return 'bg-gray-500';
-      default: return 'bg-amber-500';
-    }
+  const getStatusColor = (completed) => {
+    return completed ? 'bg-emerald-500' : 'bg-amber-500';
   };
 
-  const getStatusBorder = (status) => {
-    switch(status) {
-      case 'completed': return 'border-emerald-500';
-      case 'overdue': return 'border-red-500';
-      case 'in-progress': return 'border-blue-500';
-      case 'cancelled': return 'border-gray-500';
-      default: return 'border-amber-500';
-    }
+  const getStatusBorder = (completed) => {
+    return completed ? 'border-emerald-500' : 'border-amber-500';
   };
 
   return (
@@ -191,7 +194,13 @@ export default function CalendarPage() {
                   const isCurrentMonth = isSameMonth(day, currentMonth);
                   const isDayToday = isToday(day);
                   
-                  const tasksForDay = tasks.filter(t => t.dueDate && isSameDay(new Date(t.dueDate), day));
+                  const tasksForDay = tasks.filter(t => {
+                    if (!t.dates) return false;
+                    return t.dates.some(d => (d.date || d) === dayStr);
+                  }).map(t => {
+                    const occ = t.dates.find(d => (d.date || d) === dayStr);
+                    return { ...t, isCompleted: occ?.completed };
+                  });
                   const displayTasks = tasksForDay.slice(0, 3);
                   const remainingCount = tasksForDay.length - 3;
 
@@ -217,7 +226,7 @@ export default function CalendarPage() {
                         {/* Mobile dots indicator */}
                         <div className="md:hidden flex gap-0.5 mt-1">
                           {displayTasks.map((t, idx) => (
-                            <span key={idx} className={`w-1.5 h-1.5 rounded-full ${getStatusColor(t.status)}`}></span>
+                            <span key={idx} className={`w-1.5 h-1.5 rounded-full ${getStatusColor(t.isCompleted)}`}></span>
                           ))}
                         </div>
                       </div>
@@ -227,7 +236,7 @@ export default function CalendarPage() {
                         {displayTasks.map(t => (
                           <div 
                             key={t._id} 
-                            className={`text-[10px] leading-tight px-1.5 py-1 rounded truncate border-l-2 ${getStatusBorder(t.status)} bg-gray-50`}
+                            className={`text-[10px] leading-tight px-1.5 py-1 rounded truncate border-l-2 ${getStatusBorder(t.isCompleted)} bg-gray-50`}
                           >
                             {t.title}
                           </div>
@@ -250,12 +259,27 @@ export default function CalendarPage() {
             <div className="p-5 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-900 flex items-center justify-between">
                 {selectedDate ? format(selectedDate, 'EEEE, MMMM d') : 'Select a date'}
-                {dayTasks.length > 0 && (
-                  <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full">
-                    {dayTasks.length}
-                  </span>
-                )}
               </h2>
+              {dayTasks.length > 0 && (
+                <div className="mt-3 grid grid-cols-4 gap-2 text-center text-xs font-medium">
+                  <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
+                    <span className="block text-gray-500 mb-1">Total</span>
+                    <span className="text-sm font-bold text-gray-900">{dailyStats.total}</span>
+                  </div>
+                  <div className="bg-emerald-50 rounded-lg p-2 border border-emerald-100">
+                    <span className="block text-emerald-600 mb-1">Completed</span>
+                    <span className="text-sm font-bold text-emerald-700">{dailyStats.completed}</span>
+                  </div>
+                  <div className="bg-amber-50 rounded-lg p-2 border border-amber-100">
+                    <span className="block text-amber-600 mb-1">Non Completed</span>
+                    <span className="text-sm font-bold text-amber-700">{dailyStats.nonCompleted}</span>
+                  </div>
+                  <div className="bg-purple-50 rounded-lg p-2 border border-purple-100">
+                    <span className="block text-purple-600 mb-1">Progress</span>
+                    <span className="text-sm font-bold text-purple-700">{dailyStats.progress}%</span>
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="p-5 flex-1 overflow-y-auto">
@@ -263,26 +287,24 @@ export default function CalendarPage() {
                 <LoadingSkeleton type="list" rows={4} />
               ) : dayTasks.length > 0 ? (
                 <div className="space-y-3">
-                  {dayTasks.map(task => (
+                  {dayTasks.map(task => {
+                    const isCompleted = task.currentOccurrence?.completed;
+                    return (
                     <div 
                       key={task._id} 
                       className={`p-3 rounded-xl border border-gray-100 bg-gray-50 flex gap-3 hover:shadow-md transition-shadow
-                        border-l-4 ${getStatusBorder(task.status)}
+                        border-l-4 ${getStatusBorder(isCompleted)}
                       `}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <h4 className={`text-sm font-semibold truncate ${task.status === 'completed' ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                          <h4 className={`text-sm font-semibold truncate ${isCompleted ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
                             {task.title}
                           </h4>
                           <span className={`text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap capitalize
-                            ${task.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                              task.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                              task.status === 'overdue' ? 'bg-red-100 text-red-700' :
-                              'bg-gray-100 text-gray-700'
-                            }
+                            ${isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}
                           `}>
-                            {task.status}
+                            {isCompleted ? 'Completed' : 'Non Completed'}
                           </span>
                         </div>
                         
@@ -293,20 +315,10 @@ export default function CalendarPage() {
                               {task.dueTime}
                             </span>
                           )}
-                          <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-white border border-gray-200 text-gray-600 truncate">
-                            {task.category || 'Personal'}
-                          </span>
-                          <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded capitalize
-                            ${task.priority === 'high' ? 'text-red-600 bg-red-50' : 
-                              task.priority === 'medium' ? 'text-amber-600 bg-amber-50' : 
-                              'text-blue-600 bg-blue-50'}
-                          `}>
-                            {task.priority || 'medium'}
-                          </span>
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               ) : (
                 <div className="h-full flex items-center justify-center">

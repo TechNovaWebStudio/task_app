@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, CheckSquare, Calendar, BarChart3, Tag, Tags,
-  User, Settings, LogOut, Rocket, X, Bell, Activity, ChevronLeft, ChevronRight
+  User, Settings, LogOut, Rocket, X, Bell, Activity, ChevronLeft, ChevronRight, Clock
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { notificationApi } from '@/services/notificationApi';
@@ -16,6 +16,7 @@ const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/tasks', icon: CheckSquare, label: 'Tasks' },
   { href: '/calendar', icon: Calendar, label: 'Calendar' },
+  { href: '/history', icon: Clock, label: 'History' },
   { href: '/reports', icon: BarChart3, label: 'Reports' },
   { href: '/categories', icon: Tag, label: 'Categories' },
   { href: '/tags', icon: Tags, label: 'Tags' },
