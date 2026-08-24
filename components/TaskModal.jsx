@@ -31,7 +31,7 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
   useEffect(() => {
     if (editTask) {
       const initialDates = editTask.dates && editTask.dates.length > 0 
-        ? editTask.dates 
+        ? editTask.dates.map(d => d.date || d)
         : (editTask.dueDate ? [new Date(editTask.dueDate).toISOString().split('T')[0]] : []);
       
       reset({

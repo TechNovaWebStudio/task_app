@@ -135,12 +135,13 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onEdit, onComp
                   <Calendar className="w-4 h-4 mr-2 text-gray-400" /> Scheduled Dates
                 </h3>
                 <div className="space-y-3">
-                  {task.dates.map((date) => {
-                    const isDateCompleted = task.completedDates && task.completedDates.includes(date);
+                  {task.dates.map((dateObj) => {
+                    const dateStr = typeof dateObj === 'object' ? dateObj.date : dateObj;
+                    const isDateCompleted = typeof dateObj === 'object' ? dateObj.completed : false;
                     return (
-                      <div key={date} className="flex items-center gap-3">
+                      <div key={dateStr} className="flex items-center gap-3">
                         <button
-                          onClick={() => onComplete(task._id, !isDateCompleted, date)}
+                          onClick={() => onComplete(task._id, !isDateCompleted, dateStr)}
                           className="focus:outline-none flex-shrink-0"
                         >
                           {isDateCompleted ? (
@@ -150,7 +151,7 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onEdit, onComp
                           )}
                         </button>
                         <span className={`text-sm font-medium ${isDateCompleted ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
-                          {format(new Date(date), 'MMM d, yyyy')}
+                          {format(new Date(dateStr), 'MMM d, yyyy')}
                         </span>
                       </div>
                     );

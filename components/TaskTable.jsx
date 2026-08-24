@@ -67,14 +67,14 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
             <tbody className="divide-y divide-gray-100">
               <AnimatePresence>
                 {tasks.map((task) => {
-                  const isCompleted = task.status === 'completed' || (currentDateView && task.completedDates?.includes(currentDateView));
+                  const isCompleted = task.status === 'completed' || (currentDateView && task.dates?.find(d => (d.date || d) === currentDateView)?.completed);
                   const isSelected = selectedIds.includes(task._id);
                   let dueText = '-';
                   let isOverdue = false;
                   
                   if (task.dates && task.dates.length > 0) {
                     if (task.dates.length === 1) {
-                      const dDate = new Date(task.dates[0]);
+                      const dDate = new Date(task.dates[0].date || task.dates[0]);
                       dueText = isToday(dDate) ? 'Today' : format(dDate, 'MMM d, yyyy');
                       if (!isCompleted && isPast(dDate) && !isToday(dDate)) isOverdue = true;
                     } else {

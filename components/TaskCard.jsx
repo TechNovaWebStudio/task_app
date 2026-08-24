@@ -6,7 +6,7 @@ import { Eye, Edit2, Trash2, Calendar, Clock, CheckCircle2, Circle } from 'lucid
 
 export default function TaskCard({ task, currentDateView, onView, onEdit, onDelete, onComplete }) {
   const isCompleted = task.status === 'completed' || 
-    (currentDateView && task.completedDates?.includes(currentDateView));
+    (currentDateView && task.dates?.find(d => (d.date || d) === currentDateView)?.completed);
   
   // Format dates
   let dueText = 'No date';
@@ -14,7 +14,7 @@ export default function TaskCard({ task, currentDateView, onView, onEdit, onDele
   
   if (task.dates && task.dates.length > 0) {
     if (task.dates.length === 1) {
-      const dDate = new Date(task.dates[0]);
+      const dDate = new Date(task.dates[0].date || task.dates[0]);
       dueText = isToday(dDate) ? 'Today' : format(dDate, 'MMM d');
       if (!isCompleted && isPast(dDate) && !isToday(dDate)) isOverdue = true;
     } else {

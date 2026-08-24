@@ -57,25 +57,24 @@ export default function TasksPage() {
       setLoading(true);
       setError(null);
       
-      const params = { page, limit: 10, ...filters };
+      const params = { page, limit: 100, ...filters };
       if (currentSearch) params.search = currentSearch;
       
+      const todayStr = new Date().toISOString().split('T')[0];
+      const tomorrowD = new Date(); tomorrowD.setDate(tomorrowD.getDate() + 1);
+      const tomorrowStr = tomorrowD.toISOString().split('T')[0];
+      const yesterdayD = new Date(); yesterdayD.setDate(yesterdayD.getDate() - 1);
+      const yesterdayStr = yesterdayD.toISOString().split('T')[0];
+
       // Date View Logic
       if (dateView === 'today') {
-        const d = new Date();
-        params.date = d.toISOString().split('T')[0];
-        if (params.sortBy === 'createdAt') {
-          params.sortBy = 'dueTime';
-          params.order = 'asc';
-        }
+        params.date = todayStr;
       } else if (dateView === 'tomorrow') {
-        const d = new Date();
-        d.setDate(d.getDate() + 1);
-        params.date = d.toISOString().split('T')[0];
-      } else if (dateView === 'upcoming') {
-        const d = new Date();
-        d.setDate(d.getDate() + 2);
-        params.dateFrom = d.toISOString().split('T')[0];
+        params.date = tomorrowStr;
+      } else if (dateView === 'yesterday') {
+        params.date = yesterdayStr;
+      } else if (dateView === 'history') {
+        params.dateTo = yesterdayStr;
       } else if (dateView === 'custom' && customDate) {
         params.date = customDate;
       }
@@ -87,7 +86,7 @@ export default function TasksPage() {
       
       const { data } = await taskApi.getTasks(params);
       setTasks(data.data || []);
-      setMeta(data.meta || { total: 0, page: 1, pages: 1, limit: 10 });
+      setMeta(data.meta || { total: 0, page: 1, pages: 1, limit: 100 });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load tasks. Please try again.');
     } finally {
@@ -267,6 +266,92 @@ export default function TasksPage() {
       );
     }
 
+    if (dateView === 'all') {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const tomorrowD = new Date(); tomorrowD.setDate(tomorrowD.getDate() + 1);
+      const tomorrowStr = tomorrowD.toISOString().split('T')[0];
+      const yesterdayD = new Date(); yesterdayD.setDate(yesterdayD.getDate() - 1);
+      const yesterdayStr = yesterdayD.toISOString().split('T')[0];
+
+      const grouped = {
+        today: [],
+        tomorrow: [],
+        yesterday: [],
+        history: []
+      };
+
+      tasks.forEach(task => {
+        if (task.dates && task.dates.length > 0) {
+          task.dates.forEach(d => {
+            if (d.date === todayStr) grouped.today.push({...task, currentDateView: todayStr});
+            else if (d.date === tomorrowStr) grouped.tomorrow.push({...task, currentDateView: tomorrowStr});
+            else if (d.date === yesterdayStr) grouped.yesterday.push({...task, currentDateView: yesterdayStr});
+            else if (d.date < yesterdayStr) grouped.history.push({...task, currentDateView: d.date});
+          });
+        }
+      });
+
+      const sortByNewest = (a, b) => new Date(b.createdAt) - new Date(a.createdAt);
+      grouped.today.sort(sortByNewest);
+      grouped.tomorrow.sort(sortByNewest);
+      grouped.yesterday.sort(sortByNewest);
+      grouped.history.sort(sortByNewest);
+
+      const renderGroup = (title, groupTasks) => {
+        if (groupTasks.length === 0) return null;
+        return (
+          <div className="mb-8">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 px-1">{title}</h3>
+            {view === 'card' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {groupTasks.map((task, idx) => (
+                  <div key={`${task._id}-${idx}`} className="relative group">
+                    <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(task._id)}
+                        onChange={(e) => toggleSelectOne(task._id, e.target.checked)}
+                        className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500 shadow-sm"
+                      />
+                    </div>
+                    <TaskCard
+                      task={task}
+                      currentDateView={task.currentDateView}
+                      onView={(t) => { setDetailsTask(t); setShowDetailsModal(true); }}
+                      onEdit={(t) => { setEditTask(t); setShowEditModal(true); }}
+                      onDelete={(id) => { setDeleteTaskId(id); setShowDeleteModal(true); }}
+                      onComplete={handleComplete}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <TaskTable
+                tasks={groupTasks}
+                loading={false}
+                selectedIds={selectedIds}
+                onSelectAll={toggleSelectAll}
+                onSelectOne={toggleSelectOne}
+                onView={(t) => { setDetailsTask(t); setShowDetailsModal(true); }}
+                onEdit={(t) => { setEditTask(t); setShowEditModal(true); }}
+                onDelete={(id) => { setDeleteTaskId(id); setShowDeleteModal(true); }}
+                onComplete={(id, isComp, dateStr) => handleComplete(id, isComp, dateStr)}
+              />
+            )}
+          </div>
+        );
+      };
+
+      return (
+        <div>
+          {renderGroup('Today', grouped.today)}
+          {renderGroup('Tomorrow', grouped.tomorrow)}
+          {renderGroup('Yesterday', grouped.yesterday)}
+          {renderGroup('History', grouped.history)}
+        </div>
+      );
+    }
+
     if (view === 'card') {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -316,6 +401,7 @@ export default function TasksPage() {
         onComplete={(id, isComp) => {
           const dateStr = dateView === 'today' ? new Date().toISOString().split('T')[0] : 
                           dateView === 'tomorrow' ? (() => {const d=new Date(); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0]})() : 
+                          dateView === 'yesterday' ? (() => {const d=new Date(); d.setDate(d.getDate()-1); return d.toISOString().split('T')[0]})() :
                           dateView === 'custom' ? customDate : null;
           handleComplete(id, isComp, dateStr);
         }}
@@ -510,7 +596,7 @@ export default function TasksPage() {
 
       {/* Date Filters */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar w-full">
-        {['today', 'tomorrow', 'upcoming', 'all'].map((view) => (
+        {['today', 'tomorrow', 'yesterday', 'history', 'all'].map((view) => (
           <button
             key={view}
             onClick={() => { setDateView(view); setPage(1); }}
