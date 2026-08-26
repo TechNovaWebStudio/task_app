@@ -190,7 +190,35 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* STAT CARDS */}
+      {/* TODAY STAT CARDS */}
+      <div className="bg-purple-900 text-white rounded-2xl p-5 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-purple-200">Today&apos;s Summary ({data.todayStr})</h2>
+          <span className="text-xs font-semibold bg-purple-800 text-purple-100 px-3 py-1 rounded-full">
+            {stats.todayCompletionRate}% Rate
+          </span>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-3.5 border border-white/10">
+            <p className="text-xs text-purple-200 font-medium">Today&apos;s Tasks</p>
+            <p className="text-xl font-extrabold mt-1 text-white">{stats.todayTotal ?? todayTasks.length}</p>
+          </div>
+          <div className="bg-emerald-500/20 backdrop-blur-md rounded-xl p-3.5 border border-emerald-400/20">
+            <p className="text-xs text-emerald-200 font-medium">Completed Today</p>
+            <p className="text-xl font-extrabold mt-1 text-emerald-300">{stats.todayCompleted ?? todayTasks.filter(t => t.status === 'completed').length}</p>
+          </div>
+          <div className="bg-amber-500/20 backdrop-blur-md rounded-xl p-3.5 border border-amber-400/20">
+            <p className="text-xs text-amber-200 font-medium">Non Completed Today</p>
+            <p className="text-xl font-extrabold mt-1 text-amber-300">{stats.todayNonCompleted ?? todayTasks.filter(t => t.status === 'non_completed').length}</p>
+          </div>
+          <div className="bg-purple-500/20 backdrop-blur-md rounded-xl p-3.5 border border-purple-400/20">
+            <p className="text-xs text-purple-200 font-medium">Today&apos;s Completion Rate</p>
+            <p className="text-xl font-extrabold mt-1 text-purple-300">{stats.todayCompletionRate ?? (todayTasks.length > 0 ? Math.round((todayTasks.filter(t => t.status === 'completed').length / todayTasks.length) * 100) : 0)}%</p>
+          </div>
+        </div>
+      </div>
+
+      {/* OVERALL STAT CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatsCard
           title="Total Tasks"

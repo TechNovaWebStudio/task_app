@@ -56,7 +56,10 @@ export default function CalendarView({ tasks = [], onDateClick, selectedDate }) 
       {/* Grid */}
       <div className="grid grid-cols-7 bg-gray-100 gap-[1px]">
         {days.map((day, idx) => {
-          const dayTasks = tasks.filter(t => t.dueDate && isSameDay(new Date(t.dueDate), day));
+          const dayTasks = tasks.filter(t => {
+            const d = t.date || t.dueDate || (t.dates && t.dates[0]?.date);
+            return d && isSameDay(new Date(d), day);
+          });
           const isSelected = selectedDate && isSameDay(day, selectedDate);
           const isCurrentMonth = isSameMonth(day, monthStart);
           

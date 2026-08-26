@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { X, Clock, AlignLeft, Tag, Flag, FileText } from 'lucide-react';
 import { taskApi } from '@/services/taskApi';
@@ -9,10 +9,8 @@ import toast from 'react-hot-toast';
 import TagInput from './TagInput';
 import MultiDatePicker from './MultiDatePicker';
 
-const PRIORITIES = ['low', 'medium', 'high'];
-const STATUSES = ['pending', 'in-progress', 'completed', 'cancelled'];
-
 export default function TaskModal({ isOpen, onClose, onSuccess, categories = [], editTask = null }) {
+  const [isLoadingSeries, setIsLoadingSeries] = useState(false);
   const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm({
     defaultValues: {
       title: '',
@@ -23,36 +21,63 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
   });
 
   useEffect(() => {
-    if (editTask) {
-      const initialDates = editTask.dates && editTask.dates.length > 0 
-        ? editTask.dates.map(d => typeof d === 'string' ? { date: d, time: '' } : { date: d.date, time: d.time || '' })
-        : (editTask.dueDate ? [{ date: new Date(editTask.dueDate).toISOString().split('T')[0], time: editTask.dueTime || '' }] : []);
-      
-      reset({
-        title: editTask.title,
-        description: editTask.description,
-        dates: initialDates,
-        tags: editTask.tags || [],
-      });
-    } else {
-      reset({ tags: [], dates: [] });
+    let isMounted = true;
+    if (isOpen) {
+      if (editTask) {
+        if (editTask.seriesId) {
+          setIsLoadingSeries(true);
+          taskApi.getSeries(editTask.seriesId).then(res => {
+            if (isMounted && res.data && res.data.data) {
+              const seriesTasks = res.data.data;
+              const mappedDates = seriesTasks.map(t => ({ date: t.date, time: t.time || '' }));
+              reset({
+                title: editTask.title,
+                description: editTask.description,
+                dates: mappedDates,
+                tags: editTask.tags || [],
+              });
+            }
+          }).catch(err => {
+            console.error('Error fetching series', err);
+            if (isMounted) {
+              reset({
+                title: editTask.title,
+                description: editTask.description,
+                dates: [{ date: editTask.date, time: editTask.time || '' }],
+                tags: editTask.tags || [],
+              });
+            }
+          }).finally(() => {
+            if (isMounted) setIsLoadingSeries(false);
+          });
+        } else {
+          reset({
+            title: editTask.title,
+            description: editTask.description,
+            dates: [{ date: editTask.date || editTask.dueDate?.split('T')[0], time: editTask.time || editTask.dueTime || '' }],
+            tags: editTask.tags || [],
+          });
+        }
+      } else {
+        reset({ title: '', description: '', tags: [], dates: [] });
+      }
     }
+    return () => { isMounted = false; };
   }, [editTask, isOpen, reset]);
 
   const onSubmit = async (formData) => {
     try {
-      const payload = {
-        ...formData,
-      };
-
-      if (payload.dates && payload.dates.length > 0) {
-        payload.dueDate = payload.dates[0].date;
-        payload.dueTime = payload.dates[0].time;
+      const payload = { ...formData };
+      
+      // If dates is empty, default to today
+      if (!payload.dates || payload.dates.length === 0) {
+        toast.error("Please select at least one date.");
+        return;
       }
 
       if (editTask) {
         await taskApi.updateTask(editTask._id, payload);
-        toast.success('Task updated successfully!');
+        toast.success('Task series updated successfully!');
       } else {
         await taskApi.createTask(payload);
         toast.success('Task created successfully!');
@@ -91,7 +116,7 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
                   {editTask ? 'Edit Task' : 'Add New Task'}
                 </h2>
                 <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">
-                  {editTask ? 'Update task details' : 'Fill in the details to create a new task'}
+                  {editTask ? 'Update task details for this occurrence or its series' : 'Fill in the details to create a new task'}
                 </p>
               </div>
               <button
@@ -104,7 +129,12 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden relative">
+              {isLoadingSeries && (
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
               <div className="flex-1 overflow-y-auto p-5 space-y-6 pb-8 custom-scrollbar">
                 
                 {/* Title */}
@@ -141,7 +171,7 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
                 <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100/50 space-y-5">
                   {/* Dates */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Scheduled Dates</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Scheduled Dates <span className="text-red-500">*</span></label>
                     <Controller
                       name="dates"
                       control={control}
@@ -164,8 +194,7 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
                   </div>
                 </div>
 
-
-                </div>
+              </div>
 
               {/* Footer */}
               <div className="flex-shrink-0 flex gap-3 px-5 py-4 sm:border-t border-gray-100 bg-white sm:bg-gray-50 pb-safe pb-8 sm:pb-4">
@@ -178,7 +207,7 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isLoadingSeries}
                   className="flex-[2] sm:flex-1 py-3 sm:py-2.5 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all shadow-md shadow-purple-200 disabled:opacity-60"
                 >
                   {isSubmitting ? 'Saving...' : editTask ? 'Update Task' : 'Create Task'}

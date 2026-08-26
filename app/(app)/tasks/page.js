@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Search, Plus, Filter, X, LayoutGrid, List, CheckSquare, Trash2, SlidersHorizontal } from 'lucide-react';
+import { Search, Plus, Filter, X, LayoutGrid, List, CheckSquare, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { taskApi } from '@/services/taskApi';
 import { categoryApi } from '@/services/categoryApi';
@@ -16,19 +16,18 @@ import EmptyState from '@/components/EmptyState';
 import ErrorState from '@/components/ErrorState';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
 import Pagination from '@/components/Pagination';
+import { getTodayString, getTomorrowString, getYesterdayString } from '@/utils/dateUtils';
 
 export default function TasksPage() {
   const searchParams = useSearchParams();
   const [tasks, setTasks] = useState([]);
-  const [meta, setMeta] = useState({ total: 0, page: 1, pages: 1, limit: 10 });
+  const [meta, setMeta] = useState({ total: 0, page: 1, pages: 1, limit: 100 });
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState({
-    status: '',
-  });
+  const [filters, setFilters] = useState({ status: '' });
   const [dateView, setDateView] = useState('today');
   const [customDate, setCustomDate] = useState('');
   const [page, setPage] = useState(1);
@@ -53,15 +52,13 @@ export default function TasksPage() {
       setLoading(true);
       setError(null);
       
-      const params = { page, limit: 100, ...filters };
+      const todayStr = getTodayString();
+      const tomorrowStr = getTomorrowString();
+      const yesterdayStr = getYesterdayString();
+
+      const params = { page, limit: 100, sortBy: 'createdAt', order: 'desc', ...filters };
       if (currentSearch) params.search = currentSearch;
       
-      const todayStr = new Date().toISOString().split('T')[0];
-      const tomorrowD = new Date(); tomorrowD.setDate(tomorrowD.getDate() + 1);
-      const tomorrowStr = tomorrowD.toISOString().split('T')[0];
-      const yesterdayD = new Date(); yesterdayD.setDate(yesterdayD.getDate() - 1);
-      const yesterdayStr = yesterdayD.toISOString().split('T')[0];
-
       // Date View Logic
       if (dateView === 'today') {
         params.date = todayStr;
@@ -95,7 +92,7 @@ export default function TasksPage() {
       const { data } = await categoryApi.getCategories();
       setCategories(data?.data || []);
     } catch (err) {
-      // Categories are optional for the task form
+      // Categories optional
     }
   };
 
@@ -112,7 +109,7 @@ export default function TasksPage() {
     } else {
       fetchTasks();
     }
-  }, [page, filters]);
+  }, [page, filters, dateView, customDate]);
 
   useEffect(() => {
     const handleTasksChanged = () => fetchTasks();
@@ -131,7 +128,7 @@ export default function TasksPage() {
     searchTimeoutRef.current = setTimeout(() => {
       setPage(1);
       fetchTasks(value);
-    }, 500);
+    }, 400);
   };
 
   const handleFilterChange = (key, value) => {
@@ -140,27 +137,24 @@ export default function TasksPage() {
   };
 
   const resetFilters = () => {
-    setFilters({
-      status: '',
-    });
+    setFilters({ status: '' });
     setSearch('');
     setPage(1);
   };
 
   // Handlers
-  const handleComplete = async (id, isCompleting, dateStr = null) => {
+  const handleComplete = async (id, isCompleting) => {
     try {
-      const payload = dateStr ? { date: dateStr } : {};
       if (isCompleting) {
-        await taskApi.completeTask(id, payload);
+        await taskApi.completeTask(id);
         toast.success('Task marked as completed');
       } else {
-        await taskApi.pendingTask(id, payload);
-        toast.success('Task marked as pending');
+        await taskApi.pendingTask(id);
+        toast.success('Task marked as non_completed');
       }
       fetchTasks();
     } catch (err) {
-      toast.error('Failed to update task status');
+      toast.error(err.response?.data?.message || 'Failed to update task status');
     }
   };
 
@@ -171,7 +165,6 @@ export default function TasksPage() {
       toast.success('Task deleted successfully');
       setShowDeleteModal(false);
       setDeleteTaskId(null);
-      // Remove from selection if there
       setSelectedIds(prev => prev.filter(id => id !== deleteTaskId));
       fetchTasks();
     } catch (err) {
@@ -183,7 +176,7 @@ export default function TasksPage() {
     if (selectedIds.length === 0) return;
     try {
       await taskApi.bulkComplete(selectedIds);
-      toast.success(`${selectedIds.length} tasks marked as completed`);
+      toast.success('Selected tasks updated');
       setSelectedIds([]);
       fetchTasks();
     } catch (err) {
@@ -236,14 +229,14 @@ export default function TasksPage() {
 
     if (tasks.length === 0) {
       let emptyTitle = "No tasks found";
-      let emptyDesc = Object.values(filters).some(v => v && v !== 'createdAt' && v !== 'desc') || search
+      let emptyDesc = filters.status || search
         ? "Try adjusting your filters or search terms." 
         : "Get started by creating your first task.";
         
-      if (dateView === 'today' && !search && !Object.values(filters).some(v => v && v !== 'createdAt' && v !== 'desc')) {
+      if (dateView === 'today' && !search && !filters.status) {
         emptyTitle = "No tasks for today";
         emptyDesc = "You have a free schedule today.";
-      } else if ((dateView === 'tomorrow' || dateView === 'custom') && !search && !Object.values(filters).some(v => v && v !== 'createdAt' && v !== 'desc')) {
+      } else if ((dateView === 'tomorrow' || dateView === 'custom') && !search && !filters.status) {
         emptyTitle = "No tasks scheduled for this date.";
         emptyDesc = "";
       }
@@ -259,33 +252,32 @@ export default function TasksPage() {
     }
 
     if (dateView === 'all') {
-      const todayStr = new Date().toISOString().split('T')[0];
-      const tomorrowD = new Date(); tomorrowD.setDate(tomorrowD.getDate() + 1);
-      const tomorrowStr = tomorrowD.toISOString().split('T')[0];
-      const yesterdayD = new Date(); yesterdayD.setDate(yesterdayD.getDate() - 1);
-      const yesterdayStr = yesterdayD.toISOString().split('T')[0];
+      const todayStr = getTodayString();
+      const tomorrowStr = getTomorrowString();
+      const yesterdayStr = getYesterdayString();
 
       const grouped = {
         today: [],
         tomorrow: [],
+        future: [],
         yesterday: [],
         history: []
       };
 
       tasks.forEach(task => {
-        if (task.dates && task.dates.length > 0) {
-          task.dates.forEach(d => {
-            if (d.date === todayStr) grouped.today.push({...task, currentDateView: todayStr});
-            else if (d.date === tomorrowStr) grouped.tomorrow.push({...task, currentDateView: tomorrowStr});
-            else if (d.date === yesterdayStr) grouped.yesterday.push({...task, currentDateView: yesterdayStr});
-            else if (d.date < yesterdayStr) grouped.history.push({...task, currentDateView: d.date});
-          });
-        }
+        const d = task.date;
+        if (d === todayStr) grouped.today.push(task);
+        else if (d === tomorrowStr) grouped.tomorrow.push(task);
+        else if (d > tomorrowStr) grouped.future.push(task);
+        else if (d === yesterdayStr) grouped.yesterday.push(task);
+        else if (d < yesterdayStr) grouped.history.push(task);
       });
 
+      // Sort newest created first within each section
       const sortByNewest = (a, b) => new Date(b.createdAt) - new Date(a.createdAt);
       grouped.today.sort(sortByNewest);
       grouped.tomorrow.sort(sortByNewest);
+      grouped.future.sort(sortByNewest);
       grouped.yesterday.sort(sortByNewest);
       grouped.history.sort(sortByNewest);
 
@@ -293,11 +285,16 @@ export default function TasksPage() {
         if (groupTasks.length === 0) return null;
         return (
           <div className="mb-8">
-            <h3 className="text-lg font-bold text-gray-800 mb-4 px-1">{title}</h3>
+            <div className="flex items-center gap-2 mb-4 px-1">
+              <h3 className="text-lg font-bold text-gray-800">{title}</h3>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                {groupTasks.length}
+              </span>
+            </div>
             {view === 'card' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {groupTasks.map((task, idx) => (
-                  <div key={`${task._id}-${idx}`} className="relative group">
+                {groupTasks.map((task) => (
+                  <div key={task._id} className="relative group">
                     <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                       <input
                         type="checkbox"
@@ -308,7 +305,6 @@ export default function TasksPage() {
                     </div>
                     <TaskCard
                       task={task}
-                      currentDateView={task.currentDateView}
                       onView={(t) => { setDetailsTask(t); setShowDetailsModal(true); }}
                       onEdit={(t) => { setEditTask(t); setShowEditModal(true); }}
                       onDelete={(id) => { setDeleteTaskId(id); setShowDeleteModal(true); }}
@@ -327,7 +323,7 @@ export default function TasksPage() {
                 onView={(t) => { setDetailsTask(t); setShowDetailsModal(true); }}
                 onEdit={(t) => { setEditTask(t); setShowEditModal(true); }}
                 onDelete={(id) => { setDeleteTaskId(id); setShowDeleteModal(true); }}
-                onComplete={(id, isComp, dateStr) => handleComplete(id, isComp, dateStr)}
+                onComplete={handleComplete}
               />
             )}
           </div>
@@ -336,10 +332,11 @@ export default function TasksPage() {
 
       return (
         <div>
-          {renderGroup('Today', grouped.today)}
-          {renderGroup('Tomorrow', grouped.tomorrow)}
-          {renderGroup('Yesterday', grouped.yesterday)}
-          {renderGroup('History', grouped.history)}
+          {renderGroup('TODAY', grouped.today)}
+          {renderGroup('TOMORROW', grouped.tomorrow)}
+          {renderGroup('OTHER FUTURE TASKS', grouped.future)}
+          {renderGroup('YESTERDAY', grouped.yesterday)}
+          {renderGroup('PAST TASKS / HISTORY', grouped.history)}
         </div>
       );
     }
@@ -359,11 +356,6 @@ export default function TasksPage() {
               </div>
               <TaskCard
                 task={task}
-                currentDateView={
-                  dateView === 'today' ? new Date().toISOString().split('T')[0] : 
-                  dateView === 'tomorrow' ? (() => {const d=new Date(); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0]})() : 
-                  dateView === 'custom' ? customDate : null
-                }
                 onView={(t) => { setDetailsTask(t); setShowDetailsModal(true); }}
                 onEdit={(t) => { setEditTask(t); setShowEditModal(true); }}
                 onDelete={(id) => { setDeleteTaskId(id); setShowDeleteModal(true); }}
@@ -380,23 +372,12 @@ export default function TasksPage() {
         tasks={tasks}
         loading={loading}
         selectedIds={selectedIds}
-        currentDateView={
-          dateView === 'today' ? new Date().toISOString().split('T')[0] : 
-          dateView === 'tomorrow' ? (() => {const d=new Date(); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0]})() : 
-          dateView === 'custom' ? customDate : null
-        }
         onSelectAll={toggleSelectAll}
         onSelectOne={toggleSelectOne}
         onView={(t) => { setDetailsTask(t); setShowDetailsModal(true); }}
         onEdit={(t) => { setEditTask(t); setShowEditModal(true); }}
         onDelete={(id) => { setDeleteTaskId(id); setShowDeleteModal(true); }}
-        onComplete={(id, isComp) => {
-          const dateStr = dateView === 'today' ? new Date().toISOString().split('T')[0] : 
-                          dateView === 'tomorrow' ? (() => {const d=new Date(); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0]})() : 
-                          dateView === 'yesterday' ? (() => {const d=new Date(); d.setDate(d.getDate()-1); return d.toISOString().split('T')[0]})() :
-                          dateView === 'custom' ? customDate : null;
-          handleComplete(id, isComp, dateStr);
-        }}
+        onComplete={handleComplete}
       />
     );
   };
@@ -407,7 +388,7 @@ export default function TasksPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Tasks</h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">Manage and organize your tasks.</p>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">Manage and organize your schedule.</p>
         </div>
         
         <div className="flex items-center gap-3">
@@ -421,14 +402,14 @@ export default function TasksPage() {
               <div className="h-4 w-px bg-purple-200 mx-1"></div>
               <button 
                 onClick={handleBulkComplete}
-                className="p-1.5 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors tooltip-trigger"
+                className="p-1.5 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
                 title="Complete Selected"
               >
                 <CheckSquare className="w-4 h-4" />
               </button>
               <button 
                 onClick={handleBulkDelete}
-                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors tooltip-trigger"
+                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 title="Delete Selected"
               >
                 <Trash2 className="w-4 h-4" />
@@ -460,7 +441,7 @@ export default function TasksPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search tasks..."
+              placeholder="Search tasks by title, description, or tags..."
               value={search}
               onChange={handleSearchChange}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
@@ -471,7 +452,7 @@ export default function TasksPage() {
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`px-4 py-2 flex-1 lg:flex-none border rounded-xl flex items-center justify-center gap-2 transition-colors ${
-                showFilters || Object.values(filters).some(v => v && v !== 'createdAt' && v !== 'desc')
+                showFilters || filters.status
                   ? 'bg-purple-50 border-purple-200 text-purple-700 font-medium' 
                   : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
@@ -504,16 +485,16 @@ export default function TasksPage() {
           <motion.div 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
-            className="pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4"
+            className="pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-4"
           >
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Status Filter</label>
               <select
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
                 className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-purple-500 focus:border-purple-500"
               >
-                <option value="">All</option>
+                <option value="">All Statuses</option>
                 <option value="non_completed">Non Completed</option>
                 <option value="completed">Completed</option>
               </select>
@@ -531,23 +512,30 @@ export default function TasksPage() {
         )}
       </div>
 
-      {/* Date Filters */}
+      {/* Date Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar w-full">
-        {['today', 'tomorrow', 'yesterday', 'history', 'all'].map((view) => (
+        {[
+          { key: 'today', label: 'Today' },
+          { key: 'tomorrow', label: 'Tomorrow' },
+          { key: 'yesterday', label: 'Yesterday' },
+          { key: 'history', label: 'History (Past)' },
+          { key: 'all', label: 'All Dates' },
+        ].map((item) => (
           <button
-            key={view}
-            onClick={() => { setDateView(view); setPage(1); }}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-              dateView === view 
+            key={item.key}
+            onClick={() => { setDateView(item.key); setPage(1); }}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+              dateView === item.key 
                 ? 'bg-purple-600 text-white shadow-md shadow-purple-200' 
                 : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
             }`}
           >
-            {view.charAt(0).toUpperCase() + view.slice(1)}
+            {item.label}
           </button>
         ))}
         
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-2 py-1 ml-auto">
+          <span className="text-xs font-medium text-gray-500 pl-1">Date:</span>
           <input
             type="date"
             value={customDate}
@@ -556,7 +544,7 @@ export default function TasksPage() {
               setDateView('custom'); 
               setPage(1); 
             }}
-            className="text-sm border-none focus:ring-0 outline-none p-1 text-gray-700"
+            className="text-sm border-none focus:ring-0 outline-none p-1 text-gray-700 font-medium"
           />
         </div>
       </div>
@@ -574,9 +562,6 @@ export default function TasksPage() {
             totalPages={meta.pages}
             onPageChange={setPage}
           />
-          <div className="text-center text-sm text-gray-500 mt-2">
-            Showing {(page - 1) * meta.limit + 1} to {Math.min(page * meta.limit, meta.total)} of {meta.total} tasks
-          </div>
         </div>
       )}
 
@@ -618,7 +603,7 @@ export default function TasksPage() {
         <DeleteModal
           isOpen={showDeleteModal}
           title="Delete Task"
-          message="Are you sure you want to delete this task? This action cannot be undone."
+          message="Are you sure you want to delete this task occurrence? This action cannot be undone."
           onConfirm={handleDelete}
           onClose={() => { setShowDeleteModal(false); setDeleteTaskId(null); }}
         />
@@ -634,3 +619,4 @@ export default function TasksPage() {
     </div>
   );
 }
+

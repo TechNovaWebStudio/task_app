@@ -1,46 +1,35 @@
 'use client';
 
-import { format, isPast, isToday } from 'date-fns';
 import { motion } from 'framer-motion';
 import { Eye, Edit2, Trash2, Calendar, Clock, CheckCircle2, Circle } from 'lucide-react';
+import { getTodayString, isToday, isFutureDate } from '@/utils/dateUtils';
 
-export default function TaskCard({ task, currentDateView, onView, onEdit, onDelete, onComplete }) {
-  const isCompleted = task.status === 'completed' || 
-    (currentDateView && task.dates?.find(d => (d.date || d) === currentDateView)?.completed);
-  
-  // Format dates
-  let dueText = 'No date';
-  let isOverdue = false;
-  let occurrenceTime = null;
+export default function TaskCard({ task, onView, onEdit, onDelete, onComplete }) {
+  if (!task) return null;
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const isFuture = currentDateView && currentDateView > todayStr;
+  const todayStr = getTodayString();
+  const taskDateStr = task.date || (task.dates && task.dates[0]?.date) || '';
+  const isCompleted = task.status === 'completed';
+  const isFuture = taskDateStr ? isFutureDate(taskDateStr) : false;
   const isCompletionDisabled = isFuture;
   
-  if (task.dates && task.dates.length > 0) {
-    if (currentDateView) {
-      const occurrence = task.dates.find(d => (d.date || d) === currentDateView);
-      if (occurrence && occurrence.time) occurrenceTime = occurrence.time;
-    } else {
-      occurrenceTime = task.dates[0].time;
-    }
-  } else {
-    occurrenceTime = task.dueTime;
-  }
+  let dueText = 'No date';
+  let isOverdue = false;
   
-  if (task.dates && task.dates.length > 0) {
-    if (task.dates.length === 1) {
-      const dDate = new Date(task.dates[0].date || task.dates[0]);
-      dueText = isToday(dDate) ? 'Today' : format(dDate, 'MMM d');
-      if (!isCompleted && isPast(dDate) && !isToday(dDate)) isOverdue = true;
+  if (taskDateStr) {
+    const [y, m, d] = taskDateStr.split('-');
+    const dateObj = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+    if (isToday(taskDateStr)) {
+      dueText = 'Today';
     } else {
-      dueText = `${task.dates.length} scheduled dates`;
+      dueText = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
     }
-  } else if (task.dueDate) {
-    const dDate = new Date(task.dueDate);
-    dueText = isToday(dDate) ? 'Today' : format(dDate, 'MMM d, yyyy');
-    if (!isCompleted && isPast(dDate) && !isToday(dDate)) isOverdue = true;
+    if (!isCompleted && taskDateStr < todayStr) {
+      isOverdue = true;
+    }
   }
+
+  const occurrenceTime = task.time || task.dueTime || '';
 
   return (
     <motion.div
@@ -48,20 +37,20 @@ export default function TaskCard({ task, currentDateView, onView, onEdit, onDele
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
       className={`bg-white rounded-2xl p-4 border transition-all ${
-        isCompleted ? 'border-gray-100 opacity-70' : 'border-gray-200'
+        isCompleted ? 'border-gray-100 opacity-75 bg-gray-50/50' : 'border-gray-200'
       }`}
     >
       <div className="flex gap-3">
         <button 
-          onClick={() => !isCompletionDisabled && onComplete(task._id, !isCompleted, currentDateView)}
+          onClick={() => !isCompletionDisabled && onComplete(task._id, !isCompleted)}
           disabled={isCompletionDisabled}
-          className={`mt-0.5 flex-shrink-0 focus:outline-none ${isCompletionDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-          title={isCompletionDisabled ? "Cannot complete future tasks" : ""}
+          className={`mt-0.5 flex-shrink-0 focus:outline-none ${isCompletionDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          title={isCompletionDisabled ? "Future tasks cannot be completed before their date" : isCompleted ? "Mark as Non Completed" : "Mark as Completed"}
         >
           {isCompleted ? (
             <CheckCircle2 className="w-6 h-6 text-emerald-500" />
           ) : (
-            <Circle className={`w-6 h-6 transition-colors ${isCompletionDisabled ? 'text-gray-200' : 'text-gray-300 hover:text-purple-500'}`} />
+            <Circle className={`w-6 h-6 transition-colors ${isCompletionDisabled ? 'text-gray-300' : 'text-gray-300 hover:text-purple-600'}`} />
           )}
         </button>
         
@@ -80,28 +69,28 @@ export default function TaskCard({ task, currentDateView, onView, onEdit, onDele
           {(task.tags && task.tags.length > 0) && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               {task.tags.map(tag => (
-                <span key={tag} className="px-2 py-0.5 rounded-md text-xs font-medium bg-purple-50 text-purple-700">
+                <span key={tag} className="px-2 py-0.5 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
                   {tag}
                 </span>
               ))}
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-2 mt-3 text-sm">
+          <div className="flex flex-wrap items-center gap-2 mt-3 text-xs sm:text-sm">
             {occurrenceTime && (
-              <div className="flex items-center font-medium text-gray-700 bg-gray-100/80 px-2 py-1 rounded-md">
-                <Clock className="w-4 h-4 mr-1.5 text-purple-500" />
+              <div className="flex items-center font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded-md">
+                <Clock className="w-3.5 h-3.5 mr-1.5 text-purple-500" />
                 {occurrenceTime}
               </div>
             )}
             
-            <div className={`font-medium px-2 py-1 rounded-md ${isCompleted ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-              Status: {isCompleted ? 'Completed' : 'Non Completed'}
+            <div className={`font-semibold px-2 py-1 rounded-md text-xs ${isCompleted ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
+              {isCompleted ? 'Completed' : 'Non Completed'}
             </div>
 
-            {(task.dates?.length > 0 || task.dueDate) && (
-              <div className={`flex items-center ml-auto ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
-                <Calendar className="w-4 h-4 mr-1 text-gray-400" />
+            {taskDateStr && (
+              <div className={`flex items-center ml-auto font-medium ${isOverdue ? 'text-red-500 font-semibold' : 'text-gray-500'}`}>
+                <Calendar className="w-3.5 h-3.5 mr-1 text-gray-400" />
                 {dueText}
               </div>
             )}
@@ -109,17 +98,18 @@ export default function TaskCard({ task, currentDateView, onView, onEdit, onDele
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-1 mt-4 pt-3 border-t border-gray-50">
-        <button onClick={() => onView(task)} className="p-2 text-gray-400 hover:text-purple-600 rounded-lg hover:bg-purple-50 transition-colors">
+      <div className="flex items-center justify-end gap-1 mt-4 pt-3 border-t border-gray-100">
+        <button onClick={() => onView(task)} className="p-2 text-gray-400 hover:text-purple-600 rounded-lg hover:bg-purple-50 transition-colors" title="View details">
           <Eye className="w-4 h-4" />
         </button>
-        <button onClick={() => onEdit(task)} className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+        <button onClick={() => onEdit(task)} className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors" title="Edit task">
           <Edit2 className="w-4 h-4" />
         </button>
-        <button onClick={() => onDelete(task._id)} className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors">
+        <button onClick={() => onDelete(task._id)} className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors" title="Delete task">
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
     </motion.div>
   );
 }
+

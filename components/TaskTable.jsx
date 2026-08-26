@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { format, isPast, isToday } from 'date-fns';
 import { Eye, Edit2, Trash2, Calendar, CheckSquare, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TaskCard from './TaskCard';
+import { getTodayString, isToday, isFutureDate } from '@/utils/dateUtils';
 
-export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete, selectedIds = [], onSelectAll, onSelectOne, loading, currentDateView }) {
+export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete, selectedIds = [], onSelectAll, onSelectOne, loading }) {
   if (loading) {
     return (
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm h-64 flex items-center justify-center">
@@ -34,7 +33,6 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
             onEdit={onEdit} 
             onDelete={onDelete} 
             onComplete={onComplete}
-            currentDateView={currentDateView}
           />
         ))}
       </div>
@@ -58,7 +56,7 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
                 </th>
                 <th className="px-6 py-4 font-medium">Task</th>
                 <th className="px-6 py-4 font-medium">Time</th>
-                <th className="px-6 py-4 font-medium">Due Date</th>
+                <th className="px-6 py-4 font-medium">Scheduled Date</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
@@ -66,42 +64,30 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
             <tbody className="divide-y divide-gray-100">
               <AnimatePresence>
                 {tasks.map((task) => {
-                  const isCompleted = task.status === 'completed' || (currentDateView && task.dates?.find(d => (d.date || d) === currentDateView)?.completed);
+                  const todayStr = getTodayString();
+                  const taskDateStr = task.date || (task.dates && task.dates[0]?.date) || '';
+                  const isCompleted = task.status === 'completed';
+                  const isFuture = taskDateStr ? isFutureDate(taskDateStr) : false;
+                  const isCompletionDisabled = isFuture;
                   const isSelected = selectedIds.includes(task._id);
+
                   let dueText = '-';
                   let isOverdue = false;
-                  
-                  const todayStr = new Date().toISOString().split('T')[0];
-                  const isFuture = currentDateView && currentDateView > todayStr;
-                  const isCompletionDisabled = isFuture;
 
-                  let occurrenceTime = null;
-                  if (task.dates && task.dates.length > 0) {
-                    if (currentDateView) {
-                      const occurrence = task.dates.find(d => (d.date || d) === currentDateView);
-                      if (occurrence && occurrence.time) occurrenceTime = occurrence.time;
+                  if (taskDateStr) {
+                    const [y, m, d] = taskDateStr.split('-');
+                    const dateObj = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+                    if (isToday(taskDateStr)) {
+                      dueText = 'Today';
                     } else {
-                      occurrenceTime = task.dates[0].time;
+                      dueText = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
                     }
-                  } else {
-                    occurrenceTime = task.dueTime;
-                  }
-                  
-                  if (task.dates && task.dates.length > 0) {
-                    if (task.dates.length === 1) {
-                      const dDate = new Date(task.dates[0].date || task.dates[0]);
-                      dueText = isToday(dDate) ? 'Today' : format(dDate, 'MMM d, yyyy');
-                      if (!isCompleted && isPast(dDate) && !isToday(dDate)) isOverdue = true;
-                    } else {
-                      dueText = `${task.dates.length} scheduled dates`;
-                    }
-                  } else if (task.dueDate) {
-                    const dDate = new Date(task.dueDate);
-                    dueText = isToday(dDate) ? 'Today' : format(dDate, 'MMM d, yyyy');
-                    if (!isCompleted && isPast(dDate) && !isToday(dDate)) {
+                    if (!isCompleted && taskDateStr < todayStr) {
                       isOverdue = true;
                     }
                   }
+
+                  const occurrenceTime = task.time || task.dueTime || '';
 
                   return (
                     <motion.tr
@@ -124,10 +110,10 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
                           <button 
                             onClick={() => !isCompletionDisabled && onComplete(task._id, !isCompleted)}
                             disabled={isCompletionDisabled}
-                            title={isCompletionDisabled ? "Cannot complete future tasks" : ""}
+                            title={isCompletionDisabled ? "Future tasks cannot be completed before their date" : isCompleted ? "Mark as Non Completed" : "Mark as Completed"}
                             className={`mt-0.5 flex-shrink-0 rounded-md border ${
                               isCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 text-transparent hover:border-purple-500'
-                            } ${isCompletionDisabled ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''} w-5 h-5 flex items-center justify-center transition-colors`}
+                            } ${isCompletionDisabled ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'cursor-pointer'} w-5 h-5 flex items-center justify-center transition-colors`}
                           >
                             <CheckSquare className={`w-3.5 h-3.5 ${isCompletionDisabled && !isCompleted ? 'text-gray-300' : ''}`} />
                           </button>
@@ -159,7 +145,7 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {occurrenceTime ? (
-                          <div className="flex items-center text-xs font-medium text-gray-700 bg-gray-100/80 px-2 py-1 rounded-md max-w-fit">
+                          <div className="flex items-center text-xs font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded-md max-w-fit">
                             <Clock className="w-3.5 h-3.5 mr-1 text-purple-500" />
                             {occurrenceTime}
                           </div>
@@ -168,29 +154,31 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {(task.dates?.length > 0 || task.dueDate) && (
-                          <div className={`flex items-center text-xs ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
+                        {taskDateStr ? (
+                          <div className={`flex items-center text-xs ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
                             <Calendar className="w-3.5 h-3.5 mr-1.5" />
                             {dueText}
                           </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          isCompleted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                          isCompleted ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
                         }`}>
                           {isCompleted ? 'Completed' : 'Non Completed'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => onView(task)} className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors">
+                          <button onClick={() => onView(task)} className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="View details">
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button onClick={() => onEdit(task)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                          <button onClick={() => onEdit(task)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit task">
                             <Edit2 className="w-4 h-4" />
                           </button>
-                          <button onClick={() => onDelete(task._id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                          <button onClick={() => onDelete(task._id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete task">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -206,3 +194,4 @@ export default function TaskTable({ tasks, onView, onEdit, onDelete, onComplete,
     </>
   );
 }
+

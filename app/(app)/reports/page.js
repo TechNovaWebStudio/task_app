@@ -47,18 +47,18 @@ export default function ReportsPage() {
     toast('Export feature coming soon', { icon: '🚧' });
   };
 
-  const handleComplete = async (taskId, isCompleted, dateView) => {
+  const handleComplete = async (taskId, isCompleted) => {
     try {
       if (isCompleted) {
-        await taskApi.completeTask(taskId, { date: dateView });
+        await taskApi.completeTask(taskId);
       } else {
-        await taskApi.pendingTask(taskId, { date: dateView });
+        await taskApi.pendingTask(taskId);
       }
-      toast.success(isCompleted ? 'Task completed' : 'Task uncompleted');
+      toast.success(isCompleted ? 'Task completed' : 'Task marked non completed');
       fetchReports();
     } catch (error) {
       console.error(error);
-      toast.error('Failed to update task');
+      toast.error(error.response?.data?.message || 'Failed to update task');
     }
   };
 
@@ -86,7 +86,7 @@ export default function ReportsPage() {
 
     if (!reportData) return null;
 
-    const { totalTasks, completedTasks, nonCompletedTasks, completionPercentage, dailyReports, taskDetails } = reportData;
+    const { totalTasks, completedTasks, nonCompletedTasks, completionPercentage, dailyReports, monthlyBreakdown, taskDetails } = reportData;
 
     return (
       <div className="space-y-6">
@@ -96,6 +96,29 @@ export default function ReportsPage() {
           <StatCard title="Non Completed" value={nonCompletedTasks} color="text-red-500" />
           <StatCard title="Completion Rate" value={`${completionPercentage}%`} color="text-purple-600" />
         </div>
+
+        {/* Monthly Breakdown for Yearly Report */}
+        {monthlyBreakdown && monthlyBreakdown.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <h2 className="text-lg font-bold text-gray-800">Monthly Breakdown</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {monthlyBreakdown.map(mb => (
+                <div key={mb.month} className="bg-purple-50/50 p-4 rounded-xl border border-purple-100">
+                  <p className="text-sm font-bold text-purple-900">{mb.month}</p>
+                  <div className="mt-2 flex items-center justify-between text-xs text-gray-600">
+                    <span>Total: <b>{mb.total}</b></span>
+                    <span>Completed: <b className="text-emerald-600">{mb.completed}</b></span>
+                    <span>Non Completed: <b className="text-red-500">{mb.nonCompleted}</b></span>
+                  </div>
+                  <div className="mt-2 w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                    <div className="bg-purple-600 h-full" style={{ width: `${mb.completionPercentage}%` }}></div>
+                  </div>
+                  <p className="text-right text-[11px] font-semibold text-purple-700 mt-1">{mb.completionPercentage}%</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-8">
           <div className="p-6 border-b border-gray-100 flex items-center justify-between">
@@ -110,7 +133,7 @@ export default function ReportsPage() {
             <div className="divide-y divide-gray-100">
               {dailyReports.map((day) => {
                 const isExpanded = expandedDate === day.date;
-                const dayTasks = (taskDetails || []).filter(t => t.dates?.some(d => (d.date || d) === day.date));
+                const dayTasks = (taskDetails || []).filter(t => (t.date || (t.dates && t.dates[0]?.date)) === day.date);
 
                 return (
                   <div key={day.date} className="hover:bg-gray-50 transition-colors">
@@ -144,7 +167,6 @@ export default function ReportsPage() {
                               <TaskCard 
                                 key={task._id} 
                                 task={task} 
-                                currentDateView={day.date}
                                 onComplete={handleComplete}
                                 onView={() => {}} 
                                 onEdit={() => {}}
@@ -186,6 +208,7 @@ export default function ReportsPage() {
             <option value="last_week">Last Week</option>
             <option value="this_month">This Month</option>
             <option value="last_month">Last Month</option>
+            <option value="this_year">This Year (Yearly)</option>
             <option value="all_time">All Time</option>
             <option value="custom">Custom Date Range</option>
           </select>

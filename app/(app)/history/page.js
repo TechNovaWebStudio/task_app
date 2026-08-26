@@ -48,18 +48,18 @@ export default function HistoryPage() {
     toast('Export feature coming soon', { icon: '🚧' });
   };
 
-  const handleComplete = async (taskId, isCompleted, dateView) => {
+  const handleComplete = async (taskId, isCompleted) => {
     try {
       if (isCompleted) {
-        await taskApi.completeTask(taskId, { date: dateView });
+        await taskApi.completeTask(taskId);
       } else {
-        await taskApi.pendingTask(taskId, { date: dateView });
+        await taskApi.pendingTask(taskId);
       }
-      toast.success(isCompleted ? 'Task completed' : 'Task uncompleted');
+      toast.success(isCompleted ? 'Task completed' : 'Task marked non completed');
       fetchReports();
     } catch (error) {
       console.error(error);
-      toast.error('Failed to update task');
+      toast.error(error.response?.data?.message || 'Failed to update task');
     }
   };
 
@@ -111,16 +111,11 @@ export default function HistoryPage() {
             <div className="divide-y divide-gray-100">
               {dailyReports.map((day) => {
                 const isExpanded = expandedDate === day.date;
-                let dayTasks = (taskDetails || []).filter(t => t.dates?.some(d => (d.date || d) === day.date));
+                let dayTasks = (taskDetails || []).filter(t => (t.date || (t.dates && t.dates[0]?.date)) === day.date);
                 
                 // Apply status filter
                 if (statusFilter !== 'all') {
-                  dayTasks = dayTasks.filter(t => {
-                    const occ = t.dates?.find(d => (d.date || d) === day.date);
-                    if (statusFilter === 'completed') return occ?.completed === true;
-                    if (statusFilter === 'non_completed') return occ?.completed !== true;
-                    return true;
-                  });
+                  dayTasks = dayTasks.filter(t => t.status === statusFilter);
                 }
                 
                 // If filtering by status and no tasks match for this day, skip rendering this day
@@ -158,7 +153,6 @@ export default function HistoryPage() {
                               <TaskCard 
                                 key={task._id} 
                                 task={task} 
-                                currentDateView={day.date}
                                 onComplete={handleComplete}
                                 onView={() => {}} 
                                 onEdit={() => {}}
@@ -211,6 +205,7 @@ export default function HistoryPage() {
             <option value="last_week">Last Week</option>
             <option value="this_month">This Month</option>
             <option value="last_month">Last Month</option>
+            <option value="this_year">This Year (Yearly)</option>
             <option value="custom">Custom Date Range</option>
           </select>
           

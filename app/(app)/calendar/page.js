@@ -15,9 +15,7 @@ import {
   addDays, 
   isToday 
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, Clock, LayoutGrid, Calendar as CalendarIcon, CheckCircle2 } from 'lucide-react';
-import toast from 'react-hot-toast';
-
+import { ChevronLeft, ChevronRight, Plus, Clock, LayoutGrid, Calendar as CalendarIcon } from 'lucide-react';
 import { taskApi } from '@/services/taskApi';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
 import EmptyState from '@/components/EmptyState';
@@ -38,7 +36,7 @@ export default function CalendarPage() {
       const month = date.getMonth() + 1;
       const year = date.getFullYear();
       
-      const res = await taskApi.getTasks({ month, year, limit: 200 });
+      const res = await taskApi.getTasks({ month, year, limit: 500 });
       setTasks(res.data.data || []);
     } catch (err) {
       console.error('Failed to fetch calendar tasks:', err);
@@ -80,32 +78,23 @@ export default function CalendarPage() {
   const dayTasks = useMemo(() => {
     if (!selectedDate) return [];
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const filtered = [];
-    tasks.forEach(task => {
-      if (task.dates) {
-        const dMatch = task.dates.find(d => (d.date || d) === dateStr);
-        if (dMatch) {
-          filtered.push({ ...task, currentOccurrence: dMatch });
-        }
-      }
-    });
-    return filtered;
+    return tasks.filter(task => (task.date || task.dates?.[0]?.date || task.dates?.[0]) === dateStr);
   }, [tasks, selectedDate]);
   
   const dailyStats = useMemo(() => {
     const total = dayTasks.length;
-    const completed = dayTasks.filter(t => t.currentOccurrence?.completed).length;
+    const completed = dayTasks.filter(t => t.status === 'completed').length;
     const nonCompleted = total - completed;
     const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
     return { total, completed, nonCompleted, progress };
   }, [dayTasks]);
 
-  const getStatusColor = (completed) => {
-    return completed ? 'bg-emerald-500' : 'bg-amber-500';
+  const getStatusColor = (status) => {
+    return status === 'completed' ? 'bg-emerald-500' : 'bg-amber-500';
   };
 
-  const getStatusBorder = (completed) => {
-    return completed ? 'border-emerald-500' : 'border-amber-500';
+  const getStatusBorder = (status) => {
+    return status === 'completed' ? 'border-emerald-500' : 'border-amber-500';
   };
 
   return (
@@ -194,13 +183,7 @@ export default function CalendarPage() {
                   const isCurrentMonth = isSameMonth(day, currentMonth);
                   const isDayToday = isToday(day);
                   
-                  const tasksForDay = tasks.filter(t => {
-                    if (!t.dates) return false;
-                    return t.dates.some(d => (d.date || d) === dayStr);
-                  }).map(t => {
-                    const occ = t.dates.find(d => (d.date || d) === dayStr);
-                    return { ...t, isCompleted: occ?.completed };
-                  });
+                  const tasksForDay = tasks.filter(t => (t.date || t.dates?.[0]?.date || t.dates?.[0]) === dayStr);
                   const displayTasks = tasksForDay.slice(0, 3);
                   const remainingCount = tasksForDay.length - 3;
 
@@ -216,7 +199,7 @@ export default function CalendarPage() {
                     >
                       <div className="flex justify-between items-start mb-1">
                         <span className={`w-7 h-7 flex items-center justify-center rounded-full text-sm font-medium
-                          ${isDayToday ? 'bg-purple-600 text-white' : 
+                          ${isDayToday ? 'bg-purple-600 text-white font-bold shadow-md' : 
                             !isCurrentMonth ? 'text-gray-400' : 'text-gray-700 group-hover:text-purple-700'
                           }
                         `}>
@@ -226,7 +209,7 @@ export default function CalendarPage() {
                         {/* Mobile dots indicator */}
                         <div className="md:hidden flex gap-0.5 mt-1">
                           {displayTasks.map((t, idx) => (
-                            <span key={idx} className={`w-1.5 h-1.5 rounded-full ${getStatusColor(t.isCompleted)}`}></span>
+                            <span key={idx} className={`w-1.5 h-1.5 rounded-full ${getStatusColor(t.status)}`}></span>
                           ))}
                         </div>
                       </div>
@@ -236,7 +219,7 @@ export default function CalendarPage() {
                         {displayTasks.map(t => (
                           <div 
                             key={t._id} 
-                            className={`text-[10px] leading-tight px-1.5 py-1 rounded truncate border-l-2 ${getStatusBorder(t.isCompleted)} bg-gray-50`}
+                            className={`text-[10px] leading-tight px-1.5 py-1 rounded truncate border-l-2 ${getStatusBorder(t.status)} bg-gray-50 font-medium`}
                           >
                             {t.title}
                           </div>
@@ -288,12 +271,12 @@ export default function CalendarPage() {
               ) : dayTasks.length > 0 ? (
                 <div className="space-y-3">
                   {dayTasks.map(task => {
-                    const isCompleted = task.currentOccurrence?.completed;
+                    const isCompleted = task.status === 'completed';
                     return (
                     <div 
                       key={task._id} 
                       className={`p-3 rounded-xl border border-gray-100 bg-gray-50 flex gap-3 hover:shadow-md transition-shadow
-                        border-l-4 ${getStatusBorder(isCompleted)}
+                        border-l-4 ${getStatusBorder(task.status)}
                       `}
                     >
                       <div className="flex-1 min-w-0">
@@ -301,7 +284,7 @@ export default function CalendarPage() {
                           <h4 className={`text-sm font-semibold truncate ${isCompleted ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
                             {task.title}
                           </h4>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap capitalize
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap capitalize font-medium
                             ${isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}
                           `}>
                             {isCompleted ? 'Completed' : 'Non Completed'}
@@ -309,10 +292,10 @@ export default function CalendarPage() {
                         </div>
                         
                         <div className="flex flex-wrap items-center gap-2 mt-2">
-                          {(task.currentOccurrence?.time || task.dueTime) && (
+                          {(task.time || task.dueTime) && (
                             <span className="flex items-center gap-1 text-[11px] text-gray-500 font-medium">
                               <Clock className="w-3 h-3" />
-                              {task.currentOccurrence?.time || task.dueTime}
+                              {task.time || task.dueTime}
                             </span>
                           )}
                         </div>
@@ -346,3 +329,4 @@ export default function CalendarPage() {
     </div>
   );
 }
+
