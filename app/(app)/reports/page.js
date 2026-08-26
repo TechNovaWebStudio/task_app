@@ -156,7 +156,9 @@ export default function ReportsPage() {
             <div className="divide-y divide-gray-100">
               {dailyReports.map((day) => {
                 const isExpanded = expandedDate === day.date;
-                const dayTasks = (taskDetails || []).filter(t => (t.date || (t.dates && t.dates[0]?.date)) === day.date);
+                const dayTasks = (taskDetails || [])
+                  .filter(t => (t.date || (t.dates && t.dates[0]?.date)) === day.date)
+                  .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
                 return (
                   <div key={day.date} className="hover:bg-gray-50 transition-colors">

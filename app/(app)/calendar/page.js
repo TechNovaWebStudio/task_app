@@ -74,11 +74,13 @@ export default function CalendarPage() {
     return days;
   }, [startDate, endDate]);
 
-  // Tasks filtered for the selected date
+  // Tasks filtered for the selected date, sorted by creation order
   const dayTasks = useMemo(() => {
     if (!selectedDate) return [];
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    return tasks.filter(task => (task.date || task.dates?.[0]?.date || task.dates?.[0]) === dateStr);
+    return tasks
+      .filter(task => (task.date || task.dates?.[0]?.date || task.dates?.[0]) === dateStr)
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   }, [tasks, selectedDate]);
   
   const dailyStats = useMemo(() => {

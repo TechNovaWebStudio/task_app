@@ -56,7 +56,7 @@ export default function TasksPage() {
       const tomorrowStr = getTomorrowString();
       const yesterdayStr = getYesterdayString();
 
-      const params = { page, limit: 100, sortBy: 'createdAt', order: 'desc', ...filters };
+      const params = { page, limit: 100, sortBy: 'createdAt', order: 'asc', ...filters };
       if (currentSearch) params.search = currentSearch;
       
       // Date View Logic
@@ -273,13 +273,13 @@ export default function TasksPage() {
         else if (d < yesterdayStr) grouped.history.push(task);
       });
 
-      // Sort newest created first within each section
-      const sortByNewest = (a, b) => new Date(b.createdAt) - new Date(a.createdAt);
-      grouped.today.sort(sortByNewest);
-      grouped.tomorrow.sort(sortByNewest);
-      grouped.future.sort(sortByNewest);
-      grouped.yesterday.sort(sortByNewest);
-      grouped.history.sort(sortByNewest);
+      // Sort by creation order (first created task first) within each section
+      const sortByCreation = (a, b) => new Date(a.createdAt) - new Date(b.createdAt);
+      grouped.today.sort(sortByCreation);
+      grouped.tomorrow.sort(sortByCreation);
+      grouped.future.sort(sortByCreation);
+      grouped.yesterday.sort(sortByCreation);
+      grouped.history.sort(sortByCreation);
 
       const renderGroup = (title, groupTasks) => {
         if (groupTasks.length === 0) return null;

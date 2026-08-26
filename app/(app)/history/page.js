@@ -135,7 +135,9 @@ export default function HistoryPage() {
             <div className="divide-y divide-gray-100">
               {dailyReports.map((day) => {
                 const isExpanded = expandedDate === day.date;
-                let dayTasks = (taskDetails || []).filter(t => (t.date || (t.dates && t.dates[0]?.date)) === day.date);
+                let dayTasks = (taskDetails || [])
+                  .filter(t => (t.date || (t.dates && t.dates[0]?.date)) === day.date)
+                  .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
                 
                 // Apply status filter
                 if (statusFilter !== 'all') {
