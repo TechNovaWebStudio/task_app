@@ -111,19 +111,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
         })}
       </nav>
 
-      {/* Upgrade Banner (hidden if collapsed) */}
-      {!isCollapsed && (
-        <div className="mx-4 mb-4 p-4 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl text-white">
-          <div className="flex items-center gap-2 mb-2">
-            <Rocket className="w-5 h-5 text-yellow-300" />
-            <span className="font-semibold text-sm">Upgrade to Pro</span>
-          </div>
-          <p className="text-xs text-purple-200 mb-3">Get unlimited tasks & more.</p>
-          <button className="w-full bg-white text-purple-700 text-xs font-semibold py-2 rounded-xl hover:bg-purple-50 transition-colors">
-            Upgrade Now
-          </button>
-        </div>
-      )}
+     
 
       {/* Admin Info */}
       <div className={`p-4 border-t border-purple-100 flex items-center ${isCollapsed ? 'justify-center flex-col gap-3' : 'gap-3'}`}>
