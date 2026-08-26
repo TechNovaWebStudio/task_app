@@ -86,7 +86,7 @@ export default function ReportsPage() {
 
     if (!reportData) return null;
 
-    const { totalTasks, completedTasks, nonCompletedTasks, completionPercentage, dailyReports, monthlyBreakdown, taskDetails } = reportData;
+    const { totalTasks, completedTasks, nonCompletedTasks, completionPercentage, dailyReports, monthlyBreakdown, categoryBreakdown, taskDetails } = reportData;
 
     return (
       <div className="space-y-6">
@@ -96,6 +96,29 @@ export default function ReportsPage() {
           <StatCard title="Non Completed" value={nonCompletedTasks} color="text-red-500" />
           <StatCard title="Completion Rate" value={`${completionPercentage}%`} color="text-purple-600" />
         </div>
+
+        {/* Category Breakdown for Selected Period */}
+        {categoryBreakdown && categoryBreakdown.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <h2 className="text-lg font-bold text-gray-800">Category Statistics</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {categoryBreakdown.map(cb => (
+                <div key={cb.category} className="bg-gray-50/80 p-3 rounded-xl border border-gray-100 space-y-1">
+                  <p className="text-xs font-bold text-gray-800 truncate">{cb.category}</p>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm font-extrabold text-purple-700">{cb.total} tasks</span>
+                    <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                      {cb.completionPercentage}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden mt-1">
+                    <div className="bg-purple-600 h-full" style={{ width: `${cb.completionPercentage}%` }}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Monthly Breakdown for Yearly Report */}
         {monthlyBreakdown && monthlyBreakdown.length > 0 && (

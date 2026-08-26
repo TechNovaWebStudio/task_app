@@ -137,7 +137,7 @@ export default function TasksPage() {
   };
 
   const resetFilters = () => {
-    setFilters({ status: '' });
+    setFilters({ status: '', category: '' });
     setSearch('');
     setPage(1);
   };
@@ -490,7 +490,7 @@ export default function TasksPage() {
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Status Filter</label>
               <select
-                value={filters.status}
+                value={filters.status || ''}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
                 className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-purple-500 focus:border-purple-500"
               >
@@ -499,8 +499,27 @@ export default function TasksPage() {
                 <option value="completed">Completed</option>
               </select>
             </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Category Filter</label>
+              <select
+                value={filters.category || ''}
+                onChange={(e) => handleFilterChange('category', e.target.value)}
+                className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-purple-500 focus:border-purple-500"
+              >
+                <option value="">All Categories</option>
+                {(categories.length > 0 ? categories : [
+                  { name: 'Study' }, { name: 'Work' }, { name: 'Health' }, { name: 'Fitness' },
+                  { name: 'Personal' }, { name: 'Habits' }, { name: 'Shopping' }, { name: 'Finance' },
+                  { name: 'Family' }, { name: 'Other' }
+                ]).map(c => {
+                  const catName = typeof c === 'string' ? c : c.name;
+                  return <option key={catName} value={catName}>{catName}</option>;
+                })}
+              </select>
+            </div>
             
-            <div className="flex items-end">
+            <div className="flex items-end sm:col-span-2">
               <button
                 onClick={resetFilters}
                 className="w-full sm:w-auto px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"

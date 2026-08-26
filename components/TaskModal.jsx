@@ -3,11 +3,13 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { X, Clock, AlignLeft, Tag, Flag, FileText } from 'lucide-react';
+import { X, AlignLeft, Tag, FileText, FolderKanban } from 'lucide-react';
 import { taskApi } from '@/services/taskApi';
 import toast from 'react-hot-toast';
 import TagInput from './TagInput';
 import MultiDatePicker from './MultiDatePicker';
+
+const DEFAULT_CATEGORIES = ['Study', 'Work', 'Health', 'Fitness', 'Personal', 'Habits', 'Shopping', 'Finance', 'Family', 'Other'];
 
 export default function TaskModal({ isOpen, onClose, onSuccess, categories = [], editTask = null }) {
   const [isLoadingSeries, setIsLoadingSeries] = useState(false);
@@ -15,10 +17,16 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
     defaultValues: {
       title: '',
       description: '',
+      category: 'Personal',
+      priority: 'medium',
       dates: [],
       tags: []
     }
   });
+
+  const categoriesList = categories && categories.length > 0 
+    ? categories.map(c => typeof c === 'string' ? c : c.name) 
+    : DEFAULT_CATEGORIES;
 
   useEffect(() => {
     let isMounted = true;
@@ -31,8 +39,10 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
               const seriesTasks = res.data.data;
               const mappedDates = seriesTasks.map(t => ({ date: t.date, time: t.time || '' }));
               reset({
-                title: editTask.title,
-                description: editTask.description,
+                title: editTask.title || '',
+                description: editTask.description || '',
+                category: editTask.category || 'Personal',
+                priority: editTask.priority || 'medium',
                 dates: mappedDates,
                 tags: editTask.tags || [],
               });
@@ -41,8 +51,10 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
             console.error('Error fetching series', err);
             if (isMounted) {
               reset({
-                title: editTask.title,
-                description: editTask.description,
+                title: editTask.title || '',
+                description: editTask.description || '',
+                category: editTask.category || 'Personal',
+                priority: editTask.priority || 'medium',
                 dates: [{ date: editTask.date, time: editTask.time || '' }],
                 tags: editTask.tags || [],
               });
@@ -52,14 +64,16 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
           });
         } else {
           reset({
-            title: editTask.title,
-            description: editTask.description,
+            title: editTask.title || '',
+            description: editTask.description || '',
+            category: editTask.category || 'Personal',
+            priority: editTask.priority || 'medium',
             dates: [{ date: editTask.date || editTask.dueDate?.split('T')[0], time: editTask.time || editTask.dueTime || '' }],
             tags: editTask.tags || [],
           });
         }
       } else {
-        reset({ title: '', description: '', tags: [], dates: [] });
+        reset({ title: '', description: '', category: 'Personal', priority: 'medium', tags: [], dates: [] });
       }
     }
     return () => { isMounted = false; };
@@ -69,7 +83,6 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
     try {
       const payload = { ...formData };
       
-      // If dates is empty, default to today
       if (!payload.dates || payload.dates.length === 0) {
         toast.error("Please select at least one date.");
         return;
@@ -135,7 +148,7 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
                   <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
               )}
-              <div className="flex-1 overflow-y-auto p-5 space-y-6 pb-8 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-5 space-y-5 pb-8 custom-scrollbar">
                 
                 {/* Title */}
                 <div>
@@ -161,9 +174,42 @@ export default function TaskModal({ isOpen, onClose, onSuccess, categories = [],
                     <textarea
                       {...register('description')}
                       placeholder="Describe the task..."
-                      rows={3}
+                      rows={2}
                       className="w-full pl-10 pr-4 py-3 sm:py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all resize-none"
                     />
+                  </div>
+                </div>
+
+                {/* Category & Priority */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                      <FolderKanban className="w-4 h-4 text-purple-600" />
+                      Category <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      {...register('category')}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 bg-white transition-all"
+                    >
+                      {categoriesList.map(cat => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      Priority
+                    </label>
+                    <select
+                      {...register('priority')}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 bg-white transition-all capitalize"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
                   </div>
                 </div>
 

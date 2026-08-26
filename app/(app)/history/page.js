@@ -13,6 +13,7 @@ export default function HistoryPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedDate, setExpandedDate] = useState(null);
@@ -30,8 +31,8 @@ export default function HistoryPage() {
       setReportData(data.data);
     } catch (err) {
       console.error(err);
-      setError('Failed to load reports');
-      toast.error('Failed to load reports');
+      setError('Failed to load history');
+      toast.error('Failed to load history');
     } finally {
       setLoading(false);
     }
@@ -87,7 +88,7 @@ export default function HistoryPage() {
 
     if (!reportData) return null;
 
-    const { totalTasks, completedTasks, nonCompletedTasks, completionPercentage, dailyReports, taskDetails } = reportData;
+    const { totalTasks, completedTasks, nonCompletedTasks, completionPercentage, dailyReports, categoryBreakdown, taskDetails } = reportData;
 
     return (
       <div className="space-y-6">
@@ -98,14 +99,37 @@ export default function HistoryPage() {
           <StatCard title="Completion Rate" value={`${completionPercentage}%`} color="text-purple-600" />
         </div>
 
+        {/* Category Breakdown for History */}
+        {categoryBreakdown && categoryBreakdown.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <h2 className="text-lg font-bold text-gray-800">Category History Breakdown</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {categoryBreakdown.map(cb => (
+                <div key={cb.category} className="bg-gray-50/80 p-3 rounded-xl border border-gray-100 space-y-1">
+                  <p className="text-xs font-bold text-gray-800 truncate">{cb.category}</p>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm font-extrabold text-purple-700">{cb.total} tasks</span>
+                    <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                      {cb.completionPercentage}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden mt-1">
+                    <div className="bg-purple-600 h-full" style={{ width: `${cb.completionPercentage}%` }}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-8">
           <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-800">Day-by-Day Breakdown</h2>
+            <h2 className="text-lg font-bold text-gray-800">Day-by-Day History Log</h2>
           </div>
           
           {(!dailyReports || dailyReports.length === 0) ? (
             <div className="p-8 text-center text-gray-500">
-              No task data available for this period.
+              No task history available for this period.
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
@@ -117,9 +141,14 @@ export default function HistoryPage() {
                 if (statusFilter !== 'all') {
                   dayTasks = dayTasks.filter(t => t.status === statusFilter);
                 }
+
+                // Apply category filter
+                if (categoryFilter !== 'all') {
+                  dayTasks = dayTasks.filter(t => t.category === categoryFilter);
+                }
                 
-                // If filtering by status and no tasks match for this day, skip rendering this day
-                if (statusFilter !== 'all' && dayTasks.length === 0) return null;
+                // If filtering and no tasks match for this day, skip rendering this day
+                if ((statusFilter !== 'all' || categoryFilter !== 'all') && dayTasks.length === 0) return null;
 
                 return (
                   <div key={day.date} className="hover:bg-gray-50 transition-colors">
@@ -161,7 +190,7 @@ export default function HistoryPage() {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500 mt-2">No tasks found for this day.</p>
+                          <p className="text-sm text-gray-500 mt-2">No matching tasks found for this day.</p>
                         )}
                       </div>
                     )}
@@ -188,9 +217,20 @@ export default function HistoryPage() {
             onChange={e => setStatusFilter(e.target.value)} 
             className="bg-white border border-gray-300 text-gray-700 py-2 px-2 sm:px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm flex-1 sm:flex-none"
           >
-            <option value="all">All Status</option>
+            <option value="all">All Statuses</option>
             <option value="completed">Completed</option>
             <option value="non_completed">Non Completed</option>
+          </select>
+
+          <select 
+            value={categoryFilter} 
+            onChange={e => setCategoryFilter(e.target.value)} 
+            className="bg-white border border-gray-300 text-gray-700 py-2 px-2 sm:px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm flex-1 sm:flex-none"
+          >
+            <option value="all">All Categories</option>
+            {['Study', 'Work', 'Health', 'Fitness', 'Personal', 'Habits', 'Shopping', 'Finance', 'Family', 'Other'].map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
           </select>
 
           <select 

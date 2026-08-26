@@ -9,12 +9,15 @@ import {
   CheckCircle2, 
   TrendingUp, 
   Eye, 
-  Pencil, 
   Trash2,
   LogIn,
   Plus,
   Edit,
-  Activity
+  Activity,
+  Calendar as CalendarIcon,
+  Tag,
+  PieChart,
+  BarChart3
 } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Doughnut, Line } from 'react-chartjs-2';
@@ -41,8 +44,9 @@ export default function DashboardPage() {
       setLoading(true);
       setError(null);
       const res = await dashboardApi.getDashboard();
-      setData(res.data.data);
+      setData(res.data?.data || null);
     } catch (err) {
+      console.error('Dashboard load error:', err);
       setError('Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);
@@ -63,19 +67,9 @@ export default function DashboardPage() {
     try {
       await taskApi.completeTask(id);
       toast.success('Task marked as completed');
-      // Update local state instead of full refetch for better UX
-      setData(prev => {
-        const newData = { ...prev };
-        const taskIndex = newData.todayTasks.findIndex(t => t._id === id);
-        if (taskIndex !== -1) {
-          newData.todayTasks[taskIndex].status = 'completed';
-          newData.stats.completedTasks += 1;
-          newData.stats.pendingTasks = Math.max(0, newData.stats.pendingTasks - 1);
-        }
-        return newData;
-      });
+      fetchDashboardData();
     } catch (err) {
-      toast.error('Failed to complete task');
+      toast.error(err.response?.data?.message || 'Failed to complete task');
     }
   };
 
@@ -98,14 +92,44 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
-  const { stats, todayTasks, upcomingTasks, recentActivity, monthlyProgress } = data;
+  const stats = data.stats || {};
+  const todayTasks = data.todayTasks || [];
+  const upcomingTasks = data.upcomingTasks || [];
+  const recentActivity = data.recentActivity || [];
+  const monthlyProgress = data.monthlyProgress || [];
+  const weeklyStats = data.weeklyStats || { total: 0, completed: 0, nonCompleted: 0, completionRate: 0 };
+  const monthlyStats = data.monthlyStats || { total: 0, completed: 0, nonCompleted: 0, completionRate: 0 };
+  const yearlyStats = data.yearlyStats || { total: 0, completed: 0, nonCompleted: 0, completionRate: 0 };
+  const categoryStats = data.categoryStats || [];
+
+  // Safe helper to extract day of month from YYYY-MM-DD string
+  const getTaskDayNumber = (t) => {
+    const dateStr = t?.date || (t?.dates && t.dates[0]?.date) || t?.dueDate;
+    if (!dateStr) return null;
+    const parts = String(dateStr).split('T')[0].split('-');
+    if (parts.length === 3) {
+      return parseInt(parts[2], 10);
+    }
+    return null;
+  };
+
+  // Safe helper to format YYYY-MM-DD date string
+  const formatTaskDate = (dateStr) => {
+    if (!dateStr) return '';
+    const parts = String(dateStr).split('T')[0].split('-');
+    if (parts.length === 3) {
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      return format(d, 'MMM d');
+    }
+    return String(dateStr);
+  };
 
   // Chart Data
   const doughnutData = {
     labels: ['Completed', 'Pending', 'Overdue'],
     datasets: [
       {
-        data: [stats.completedTasks, stats.pendingTasks, stats.overdueTasks],
+        data: [stats.completedTasks || 0, stats.pendingTasks || 0, stats.overdueTasks || 0],
         backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
         borderWidth: 0,
       },
@@ -127,7 +151,7 @@ export default function DashboardPage() {
     datasets: [
       {
         label: 'Total Tasks',
-        data: monthlyProgress.map(d => d.total),
+        data: monthlyProgress.map(d => d.total || 0),
         borderColor: '#7C3AED',
         backgroundColor: 'rgba(124, 58, 237, 0.1)',
         fill: true,
@@ -135,7 +159,7 @@ export default function DashboardPage() {
       },
       {
         label: 'Completed',
-        data: monthlyProgress.map(d => d.completed),
+        data: monthlyProgress.map(d => d.completed || 0),
         borderColor: '#10B981',
         backgroundColor: 'transparent',
         tension: 0.4,
@@ -164,14 +188,15 @@ export default function DashboardPage() {
     }
   };
 
-  const currentMonthDays = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-  const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay();
-  const today = new Date().getDate();
+  const now = new Date();
+  const currentMonthDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+  const today = now.getDate();
 
-  // Tasks mapped by day for the mini calendar
+  // Map day numbers with tasks for mini calendar
   const taskDays = new Set([
-    ...todayTasks.map(t => new Date(t.dueDate).getDate()),
-    ...upcomingTasks.map(t => new Date(t.dueDate).getDate())
+    ...todayTasks.map(t => getTaskDayNumber(t)).filter(Boolean),
+    ...upcomingTasks.map(t => getTaskDayNumber(t)).filter(Boolean)
   ]);
 
   return (
@@ -185,17 +210,17 @@ export default function DashboardPage() {
           <p className="text-xs sm:text-sm text-gray-500 mt-1">Here&apos;s what&apos;s happening with your tasks today.</p>
         </div>
         <div className="text-left md:text-right">
-          <p className="text-base sm:text-lg font-semibold text-gray-800">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
-          <p className="text-xs sm:text-sm text-gray-500">{format(new Date(), 'h:mm a')}</p>
+          <p className="text-base sm:text-lg font-semibold text-gray-800">{format(now, 'EEEE, MMMM d, yyyy')}</p>
+          <p className="text-xs sm:text-sm text-gray-500">{format(now, 'h:mm a')}</p>
         </div>
       </div>
 
       {/* TODAY STAT CARDS */}
-      <div className="bg-purple-900 text-white rounded-2xl p-5 shadow-sm space-y-3">
+      <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-800 text-white rounded-2xl p-5 shadow-md space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold uppercase tracking-wider text-purple-200">Today&apos;s Summary ({data.todayStr})</h2>
-          <span className="text-xs font-semibold bg-purple-800 text-purple-100 px-3 py-1 rounded-full">
-            {stats.todayCompletionRate}% Rate
+          <span className="text-xs font-semibold bg-purple-800/80 border border-purple-400/30 text-purple-100 px-3 py-1 rounded-full">
+            {stats.todayCompletionRate ?? 0}% Rate
           </span>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -205,15 +230,15 @@ export default function DashboardPage() {
           </div>
           <div className="bg-emerald-500/20 backdrop-blur-md rounded-xl p-3.5 border border-emerald-400/20">
             <p className="text-xs text-emerald-200 font-medium">Completed Today</p>
-            <p className="text-xl font-extrabold mt-1 text-emerald-300">{stats.todayCompleted ?? todayTasks.filter(t => t.status === 'completed').length}</p>
+            <p className="text-xl font-extrabold mt-1 text-emerald-300">{stats.todayCompleted ?? 0}</p>
           </div>
           <div className="bg-amber-500/20 backdrop-blur-md rounded-xl p-3.5 border border-amber-400/20">
             <p className="text-xs text-amber-200 font-medium">Non Completed Today</p>
-            <p className="text-xl font-extrabold mt-1 text-amber-300">{stats.todayNonCompleted ?? todayTasks.filter(t => t.status === 'non_completed').length}</p>
+            <p className="text-xl font-extrabold mt-1 text-amber-300">{stats.todayNonCompleted ?? 0}</p>
           </div>
           <div className="bg-purple-500/20 backdrop-blur-md rounded-xl p-3.5 border border-purple-400/20">
             <p className="text-xs text-purple-200 font-medium">Today&apos;s Completion Rate</p>
-            <p className="text-xl font-extrabold mt-1 text-purple-300">{stats.todayCompletionRate ?? (todayTasks.length > 0 ? Math.round((todayTasks.filter(t => t.status === 'completed').length / todayTasks.length) * 100) : 0)}%</p>
+            <p className="text-xl font-extrabold mt-1 text-purple-300">{stats.todayCompletionRate ?? 0}%</p>
           </div>
         </div>
       </div>
@@ -222,32 +247,135 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatsCard
           title="Total Tasks"
-          value={stats.totalTasks}
+          value={stats.totalTasks ?? 0}
           icon={CheckSquare}
           color="purple"
         />
         <StatsCard
           title="Pending Tasks"
-          value={stats.pendingTasks}
+          value={stats.pendingTasks ?? 0}
           icon={Clock}
           color="orange"
         />
         <StatsCard
           title="Completed Tasks"
-          value={stats.completedTasks}
+          value={stats.completedTasks ?? 0}
           icon={CheckCircle2}
           color="green"
         />
         <StatsCard
           title="Productivity"
-          value={`${stats.productivity}%`}
+          value={`${stats.productivity ?? 0}%`}
           icon={TrendingUp}
           color="blue"
-          trend={stats.productivity >= stats.lastMonthProductivity ? 'up' : 'down'}
-          trendValue={`${Math.abs(stats.productivity - stats.lastMonthProductivity)}%`}
+          trend={(stats.productivity || 0) >= (stats.lastMonthProductivity || 0) ? 'up' : 'down'}
+          trendValue={`${Math.abs((stats.productivity || 0) - (stats.lastMonthProductivity || 0))}%`}
           trendLabel="vs last month"
         />
       </div>
+
+      {/* PERIOD SUMMARY CARDS (WEEKLY, MONTHLY, YEARLY) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Weekly Report */}
+        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <CalendarIcon className="w-4 h-4 text-purple-600" />
+              Weekly Summary
+            </h3>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+              {weeklyStats.completionRate}%
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between pt-2">
+            <div>
+              <p className="text-2xl font-extrabold text-gray-900">{weeklyStats.total}</p>
+              <p className="text-xs text-gray-500 mt-0.5">Total Tasks This Week</p>
+            </div>
+            <div className="text-right text-xs font-medium space-y-0.5">
+              <p className="text-emerald-600">✓ {weeklyStats.completed} Completed</p>
+              <p className="text-amber-600">• {weeklyStats.nonCompleted} Non Completed</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Monthly Report */}
+        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-blue-600" />
+              Monthly Summary
+            </h3>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+              {monthlyStats.completionRate}%
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between pt-2">
+            <div>
+              <p className="text-2xl font-extrabold text-gray-900">{monthlyStats.total}</p>
+              <p className="text-xs text-gray-500 mt-0.5">Total Tasks This Month</p>
+            </div>
+            <div className="text-right text-xs font-medium space-y-0.5">
+              <p className="text-emerald-600">✓ {monthlyStats.completed} Completed</p>
+              <p className="text-amber-600">• {monthlyStats.nonCompleted} Non Completed</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Yearly Report */}
+        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <PieChart className="w-4 h-4 text-emerald-600" />
+              Yearly Summary
+            </h3>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+              {yearlyStats.completionRate}%
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between pt-2">
+            <div>
+              <p className="text-2xl font-extrabold text-gray-900">{yearlyStats.total}</p>
+              <p className="text-xs text-gray-500 mt-0.5">Total Tasks This Year</p>
+            </div>
+            <div className="text-right text-xs font-medium space-y-0.5">
+              <p className="text-emerald-600">✓ {yearlyStats.completed} Completed</p>
+              <p className="text-amber-600">• {yearlyStats.nonCompleted} Non Completed</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CATEGORY STATISTICS SECTION */}
+      {categoryStats.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Tag className="w-5 h-5 text-purple-600" />
+              Category Statistics
+            </h2>
+            <Link href="/categories" className="text-sm text-purple-600 hover:text-purple-700 font-medium">
+              Manage Categories
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            {categoryStats.map(cat => (
+              <div key={cat.category} className="bg-gray-50/80 p-3 rounded-xl border border-gray-100 space-y-1">
+                <p className="text-xs font-bold text-gray-800 truncate">{cat.category}</p>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-lg font-extrabold text-purple-700">{cat.total}</span>
+                  <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                    {cat.completionRate}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden mt-1">
+                  <div className="bg-purple-600 h-full transition-all" style={{ width: `${cat.completionRate}%` }}></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* TWO COLUMN LAYOUT */}
       <div className="flex flex-col xl:flex-row gap-6 lg:gap-8">
@@ -298,13 +426,13 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-3 flex-shrink-0 pl-4">
-                        {task.dueTime && (
+                        {(task.time || task.dueTime) && (
                           <span className="text-xs text-gray-500 flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> {task.dueTime}
+                            <Clock className="w-3 h-3" /> {task.time || task.dueTime}
                           </span>
                         )}
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity md:opacity-100">
-                          <Link href={`/tasks/${task._id}`} className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg">
+                          <Link href={`/tasks`} className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg">
                             <Eye className="w-4 h-4" />
                           </Link>
                         </div>
@@ -324,12 +452,12 @@ export default function DashboardPage() {
 
           {/* Task Completion Chart */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-6">Task Status</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-6">Task Status Overview</h2>
             <div className="relative h-64 w-full flex justify-center">
               <Doughnut data={doughnutData} options={doughnutOptions} />
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-[-20px]">
                 <span className="text-3xl font-bold text-gray-800">
-                  {stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0}%
+                  {(stats.totalTasks || 0) > 0 ? Math.round(((stats.completedTasks || 0) / stats.totalTasks) * 100) : 0}%
                 </span>
                 <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Completed</span>
               </div>
@@ -342,7 +470,7 @@ export default function DashboardPage() {
           
           {/* Mini Calendar */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">{format(new Date(), 'MMMM yyyy')}</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">{format(now, 'MMMM yyyy')}</h2>
             <div className="grid grid-cols-7 gap-1 text-center mb-2">
               {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
                 <div key={day} className="text-xs font-semibold text-gray-400 py-1">{day}</div>
@@ -373,7 +501,7 @@ export default function DashboardPage() {
 
           {/* Task Trend Chart */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Monthly Trend</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Monthly Progress Trend</h2>
             <div className="h-48">
               <Line data={lineData} options={lineOptions} />
             </div>
@@ -394,9 +522,9 @@ export default function DashboardPage() {
                     <div key={task._id} className="flex flex-col gap-1 border-l-2 border-purple-500 pl-3">
                       <p className="text-sm font-semibold text-gray-900 truncate">{task.title}</p>
                       <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <span>{format(new Date(task.dueDate), 'MMM d')}</span>
-                        {task.dueTime && <span>• {task.dueTime}</span>}
-                        <span>• {task.priority}</span>
+                        <span>{formatTaskDate(task.date || task.dueDate)}</span>
+                        {(task.time || task.dueTime) && <span>• {task.time || task.dueTime}</span>}
+                        <span>• {task.category || 'Personal'}</span>
                       </div>
                     </div>
                   ))}
