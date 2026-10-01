@@ -13,4 +13,5 @@ export const taskApi = {
   archiveTask: (id) => api.patch(`/tasks/${id}/archive`),
   bulkDelete: (ids) => api.post('/tasks/bulk-delete', { ids }),
   bulkComplete: (ids) => api.post('/tasks/bulk-complete', { ids }),
+  reorderTasks: (tasks) => api.patch('/tasks/reorder', { tasks }),
 };

@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { taskApi } from '@/services/taskApi';
 import { categoryApi } from '@/services/categoryApi';
 import TaskTable from '@/components/TaskTable';
+import DraggableTaskList from '@/components/DraggableTaskList';
 import TaskCard from '@/components/TaskCard';
 import TaskModal from '@/components/TaskModal';
 import TaskDetailsModal from '@/components/TaskDetailsModal';
@@ -46,6 +47,7 @@ export default function TasksPage() {
   const [deleteTaskId, setDeleteTaskId] = useState(null);
   
   const searchTimeoutRef = useRef(null);
+  const previousTasksRef = useRef([]);
 
   const fetchTasks = async (currentSearch = search) => {
     try {
@@ -56,7 +58,7 @@ export default function TasksPage() {
       const tomorrowStr = getTomorrowString();
       const yesterdayStr = getYesterdayString();
 
-      const params = { page, limit: 100, sortBy: 'createdAt', order: 'asc', ...filters };
+      const params = { page, limit: 100, ...filters };
       if (currentSearch) params.search = currentSearch;
       
       // Date View Logic
@@ -212,6 +214,24 @@ export default function TasksPage() {
     }
   };
 
+  // Drag-to-reorder: optimistic update + single API call on drop
+  const handleReorder = async (newOrderedTasks) => {
+    previousTasksRef.current = tasks;
+    setTasks(newOrderedTasks);
+
+    try {
+      const reorderPayload = newOrderedTasks.map((task, index) => ({
+        id: task._id,
+        sortOrder: index,
+      }));
+      await taskApi.reorderTasks(reorderPayload);
+    } catch (err) {
+      // Rollback on failure
+      setTasks(previousTasksRef.current);
+      toast.error('Unable to save task order. Please try again.');
+    }
+  };
+
   const renderContent = () => {
     if (loading && tasks.length === 0) {
       return (
@@ -273,13 +293,13 @@ export default function TasksPage() {
         else if (d < yesterdayStr) grouped.history.push(task);
       });
 
-      // Sort by creation order (first created task first) within each section
-      const sortByCreation = (a, b) => new Date(a.createdAt) - new Date(b.createdAt);
-      grouped.today.sort(sortByCreation);
-      grouped.tomorrow.sort(sortByCreation);
-      grouped.future.sort(sortByCreation);
-      grouped.yesterday.sort(sortByCreation);
-      grouped.history.sort(sortByCreation);
+      // Sort by user-defined sortOrder, then creation order as fallback
+      const sortByOrder = (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || new Date(a.createdAt) - new Date(b.createdAt);
+      grouped.today.sort(sortByOrder);
+      grouped.tomorrow.sort(sortByOrder);
+      grouped.future.sort(sortByOrder);
+      grouped.yesterday.sort(sortByOrder);
+      grouped.history.sort(sortByOrder);
 
       const renderGroup = (title, groupTasks) => {
         if (groupTasks.length === 0) return null;
@@ -314,16 +334,13 @@ export default function TasksPage() {
                 ))}
               </div>
             ) : (
-              <TaskTable
+              <DraggableTaskList
                 tasks={groupTasks}
-                loading={false}
-                selectedIds={selectedIds}
-                onSelectAll={toggleSelectAll}
-                onSelectOne={toggleSelectOne}
                 onView={(t) => { setDetailsTask(t); setShowDetailsModal(true); }}
                 onEdit={(t) => { setEditTask(t); setShowEditModal(true); }}
                 onDelete={(id) => { setDeleteTaskId(id); setShowDeleteModal(true); }}
                 onComplete={handleComplete}
+                onReorder={handleReorder}
               />
             )}
           </div>
@@ -368,16 +385,13 @@ export default function TasksPage() {
     }
 
     return (
-      <TaskTable
+      <DraggableTaskList
         tasks={tasks}
-        loading={loading}
-        selectedIds={selectedIds}
-        onSelectAll={toggleSelectAll}
-        onSelectOne={toggleSelectOne}
         onView={(t) => { setDetailsTask(t); setShowDetailsModal(true); }}
         onEdit={(t) => { setEditTask(t); setShowEditModal(true); }}
         onDelete={(id) => { setDeleteTaskId(id); setShowDeleteModal(true); }}
         onComplete={handleComplete}
+        onReorder={handleReorder}
       />
     );
   };
