@@ -153,15 +153,15 @@ export default function SettingsPage() {
     </button>
   );
 
-  const sections = [
-    { id: 'account', label: 'Profile Settings', icon: <User className="w-5 h-5" /> },
-    { id: 'password', label: 'Change Password', icon: <Lock className="w-5 h-5" /> },
-    { id: 'notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" /> },
-    { id: 'appearance', label: 'Appearance', icon: <Palette className="w-5 h-5" /> },
-    { id: 'region', label: 'Language & Region', icon: <Globe className="w-5 h-5" /> },
-    { id: 'security', label: 'Security', icon: <Shield className="w-5 h-5" /> },
-    { id: 'data', label: 'Data Management', icon: <Database className="w-5 h-5" /> },
-    { id: 'backup', label: 'Backup & Restore', icon: <HardDrive className="w-5 h-5" /> },
+  const SECTIONS = [
+    { id: 'account', label: 'Profile Settings', icon: User },
+    { id: 'password', label: 'Change Password', icon: Lock },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'appearance', label: 'Appearance', icon: Palette },
+    { id: 'region', label: 'Language & Region', icon: Globe },
+    { id: 'security', label: 'Security', icon: Shield },
+    { id: 'data', label: 'Data Management', icon: Database },
+    { id: 'backup', label: 'Backup & Restore', icon: HardDrive },
   ];
 
   if (loading) {
@@ -174,36 +174,38 @@ export default function SettingsPage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-6xl mx-auto space-y-6 w-full pb-20 lg:pb-6">
-      <h1 className="text-2xl font-bold text-gray-800">Settings</h1>
-      
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* Left Nav */}
-        <div className="w-full md:w-64 shrink-0">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden sticky top-6">
-            <nav className="flex flex-col p-2 space-y-1">
-              {sections.map((section) => (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(section.id)}
-                  className={`flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-                    activeSection === section.id
-                      ? 'bg-purple-50 text-purple-700'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <span className={`mr-3 ${activeSection === section.id ? 'text-purple-600' : 'text-gray-400'}`}>
-                    {section.icon}
-                  </span>
-                  {section.label}
-                </button>
-              ))}
-            </nav>
+      {/* Header */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-1 h-7 bg-gradient-to-b from-purple-600 to-indigo-600 rounded-full" />
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">Settings</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Manage your account preferences and configurations.</p>
           </div>
         </div>
-        
-        {/* Right Content */}
+        {/* Section navigation pills */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {SECTIONS.map(s => (
+            <button
+              key={s.id}
+              onClick={() => setActiveSection(s.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
+                activeSection === s.id
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-transparent shadow-sm'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:text-purple-700'
+              }`}
+            >
+              <s.icon className="w-3.5 h-3.5" />
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-6">
+        {/* Full-width Content */}
         <div className="flex-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[500px]">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px]">
             <div className="p-6 md:p-8">
               
               {/* Account Section */}
@@ -216,7 +218,7 @@ export default function SettingsPage() {
                       <input 
                         type="text" 
                         {...registerProfile('name', { required: 'Name is required' })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
                       />
                       {profileErrors.name && <p className="mt-1 text-sm text-red-600">{profileErrors.name.message}</p>}
                     </div>
@@ -225,7 +227,7 @@ export default function SettingsPage() {
                       <input 
                         type="email" 
                         {...registerProfile('email', { required: 'Email is required' })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
                       />
                       {profileErrors.email && <p className="mt-1 text-sm text-red-600">{profileErrors.email.message}</p>}
                     </div>
@@ -233,7 +235,7 @@ export default function SettingsPage() {
                       <button 
                         type="submit" 
                         disabled={saving}
-                        className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-70"
+                        className="flex items-center px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:opacity-90 transition-opacity disabled:opacity-70 font-medium text-sm shadow-sm"
                       >
                         <Save className="w-4 h-4 mr-2" />
                         {saving ? 'Saving...' : 'Save Changes'}
@@ -253,7 +255,7 @@ export default function SettingsPage() {
                       <input 
                         type="password" 
                         {...registerPassword('currentPassword', { required: 'Required' })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
                       />
                       {passwordErrors.currentPassword && <p className="mt-1 text-sm text-red-600">{passwordErrors.currentPassword.message}</p>}
                     </div>
@@ -262,7 +264,7 @@ export default function SettingsPage() {
                       <input 
                         type="password" 
                         {...registerPassword('newPassword', { required: 'Required', minLength: { value: 6, message: 'Min 6 characters' } })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
                       />
                       {passwordErrors.newPassword && <p className="mt-1 text-sm text-red-600">{passwordErrors.newPassword.message}</p>}
                     </div>
@@ -274,7 +276,7 @@ export default function SettingsPage() {
                           required: 'Required',
                           validate: val => val === newPassword || 'Passwords do not match'
                         })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
                       />
                       {passwordErrors.confirmPassword && <p className="mt-1 text-sm text-red-600">{passwordErrors.confirmPassword.message}</p>}
                     </div>
@@ -282,7 +284,7 @@ export default function SettingsPage() {
                       <button 
                         type="submit" 
                         disabled={saving}
-                        className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-70"
+                        className="flex items-center px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:opacity-90 transition-opacity disabled:opacity-70 font-medium text-sm shadow-sm"
                       >
                         <Save className="w-4 h-4 mr-2" />
                         {saving ? 'Updating...' : 'Update Password'}
@@ -296,8 +298,8 @@ export default function SettingsPage() {
               {activeSection === 'notifications' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-2xl">
                   <h2 className="text-xl font-bold text-gray-900 mb-6">Notification Preferences</h2>
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between bg-gray-50 rounded-xl border border-gray-100 p-4 mb-3">
                       <div>
                         <h3 className="font-medium text-gray-900">Enable All Notifications</h3>
                         <p className="text-sm text-gray-500 mt-1">Master switch for all system notifications</p>
@@ -305,22 +307,22 @@ export default function SettingsPage() {
                       <ToggleSwitch value={notifSettings.notificationsEnabled} onChange={() => handleNotifToggle('notificationsEnabled')} />
                     </div>
                     
-                    <div className={`space-y-4 ${!notifSettings.notificationsEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
-                      <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                    <div className={`space-y-3 ${!notifSettings.notificationsEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
+                      <div className="flex items-center justify-between bg-gray-50 rounded-xl border border-gray-100 p-4 mb-3">
                         <div>
                           <h3 className="font-medium text-gray-900">Email Notifications</h3>
                           <p className="text-sm text-gray-500">Receive daily summaries and alerts via email</p>
                         </div>
                         <ToggleSwitch value={notifSettings.emailNotifications} onChange={() => handleNotifToggle('emailNotifications')} />
                       </div>
-                      <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                      <div className="flex items-center justify-between bg-gray-50 rounded-xl border border-gray-100 p-4 mb-3">
                         <div>
                           <h3 className="font-medium text-gray-900">Task Reminders</h3>
                           <p className="text-sm text-gray-500">Get notified when tasks are due soon</p>
                         </div>
                         <ToggleSwitch value={notifSettings.taskReminders} onChange={() => handleNotifToggle('taskReminders')} />
                       </div>
-                      <div className="flex items-center justify-between py-3">
+                      <div className="flex items-center justify-between bg-gray-50 rounded-xl border border-gray-100 p-4 mb-3">
                         <div>
                           <h3 className="font-medium text-gray-900">Weekly Report</h3>
                           <p className="text-sm text-gray-500">Receive a weekly digest of your productivity</p>
@@ -340,22 +342,22 @@ export default function SettingsPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-3">Theme Preference</label>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <label className={`relative flex cursor-pointer rounded-lg border p-4 shadow-sm focus:outline-none ${appSettings.theme === 'light' ? 'border-purple-600 ring-1 ring-purple-600 bg-purple-50' : 'border-gray-300 bg-white hover:bg-gray-50'}`}>
+                        <label className={`relative flex cursor-pointer rounded-xl border-2 p-5 shadow-sm focus:outline-none transition-all ${appSettings.theme === 'light' ? 'border-purple-600 ring-1 ring-purple-600 bg-purple-50' : 'border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300'}`}>
                           <input type="radio" name="theme" value="light" checked={appSettings.theme === 'light'} onChange={handleAppSettingChange} className="sr-only" />
                           <span className="flex flex-1">
                             <span className="flex flex-col">
-                              <span className="block text-sm font-medium text-gray-900">Light Mode</span>
+                              <span className="block text-sm font-semibold text-gray-900">☀️ Light Mode</span>
                               <span className="mt-1 flex items-center text-sm text-gray-500">Default bright interface</span>
                             </span>
                           </span>
                           <CheckCircleIcon className={`h-5 w-5 ${appSettings.theme === 'light' ? 'text-purple-600' : 'hidden'}`} />
                         </label>
                         
-                        <label className={`relative flex cursor-pointer rounded-lg border p-4 shadow-sm focus:outline-none ${appSettings.theme === 'dark' ? 'border-purple-600 ring-1 ring-purple-600 bg-purple-50' : 'border-gray-300 bg-white hover:bg-gray-50'}`}>
+                        <label className={`relative flex cursor-pointer rounded-xl border-2 p-5 shadow-sm focus:outline-none transition-all ${appSettings.theme === 'dark' ? 'border-purple-600 ring-1 ring-purple-600 bg-purple-50' : 'border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300'}`}>
                           <input type="radio" name="theme" value="dark" checked={appSettings.theme === 'dark'} onChange={handleAppSettingChange} className="sr-only" />
                           <span className="flex flex-1">
                             <span className="flex flex-col">
-                              <span className="block text-sm font-medium text-gray-900">Dark Mode</span>
+                              <span className="block text-sm font-semibold text-gray-900">🌙 Dark Mode</span>
                               <span className="mt-1 flex items-center text-sm text-gray-500">Easier on the eyes (Coming soon)</span>
                             </span>
                           </span>
@@ -375,7 +377,7 @@ export default function SettingsPage() {
                   <div className="space-y-5">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Language</label>
-                      <select name="language" value={appSettings.language} onChange={handleAppSettingChange} className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-purple-500 focus:outline-none focus:ring-purple-500 sm:text-sm border bg-white">
+                      <select name="language" value={appSettings.language} onChange={handleAppSettingChange} className="mt-1 block w-full rounded-xl border border-gray-200 py-2.5 pl-3 pr-10 text-base focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 sm:text-sm bg-white">
                         <option value="en">English (US)</option>
                         <option value="es">Español (ES)</option>
                         <option value="fr">Français (FR)</option>
@@ -384,11 +386,11 @@ export default function SettingsPage() {
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
-                      <select name="timezone" value={appSettings.timezone} onChange={handleAppSettingChange} className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-purple-500 focus:outline-none focus:ring-purple-500 sm:text-sm border bg-white">
+                      <select name="timezone" value={appSettings.timezone} onChange={handleAppSettingChange} className="mt-1 block w-full rounded-xl border border-gray-200 py-2.5 pl-3 pr-10 text-base focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 sm:text-sm bg-white">
                         <option value="UTC">UTC (Coordinated Universal Time)</option>
-                        <option value="America/New_York">Eastern Time (US & Canada)</option>
-                        <option value="America/Chicago">Central Time (US & Canada)</option>
-                        <option value="America/Los_Angeles">Pacific Time (US & Canada)</option>
+                        <option value="America/New_York">Eastern Time (US &amp; Canada)</option>
+                        <option value="America/Chicago">Central Time (US &amp; Canada)</option>
+                        <option value="America/Los_Angeles">Pacific Time (US &amp; Canada)</option>
                         <option value="Europe/London">London</option>
                         <option value="Europe/Paris">Paris, Berlin, Rome</option>
                         <option value="Asia/Kolkata">India Standard Time</option>
@@ -400,7 +402,7 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Date Format</label>
-                        <select name="dateFormat" value={appSettings.dateFormat} onChange={handleAppSettingChange} className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-purple-500 focus:outline-none focus:ring-purple-500 sm:text-sm border bg-white">
+                        <select name="dateFormat" value={appSettings.dateFormat} onChange={handleAppSettingChange} className="mt-1 block w-full rounded-xl border border-gray-200 py-2.5 pl-3 pr-10 text-base focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 sm:text-sm bg-white">
                           <option value="MM/DD/YYYY">MM/DD/YYYY</option>
                           <option value="DD/MM/YYYY">DD/MM/YYYY</option>
                           <option value="YYYY-MM-DD">YYYY-MM-DD</option>
@@ -408,7 +410,7 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Time Format</label>
-                        <select name="timeFormat" value={appSettings.timeFormat} onChange={handleAppSettingChange} className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-purple-500 focus:outline-none focus:ring-purple-500 sm:text-sm border bg-white">
+                        <select name="timeFormat" value={appSettings.timeFormat} onChange={handleAppSettingChange} className="mt-1 block w-full rounded-xl border border-gray-200 py-2.5 pl-3 pr-10 text-base focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 sm:text-sm bg-white">
                           <option value="12h">12-hour (1:00 PM)</option>
                           <option value="24h">24-hour (13:00)</option>
                         </select>
@@ -421,7 +423,9 @@ export default function SettingsPage() {
               {/* Security Section (Placeholder) */}
               {activeSection === 'security' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-12 text-center max-w-lg mx-auto">
-                  <Shield className="w-16 h-16 text-gray-300 mb-4" />
+                  <div className="w-20 h-20 bg-purple-50 rounded-2xl flex items-center justify-center mb-5 border border-purple-100">
+                    <Shield className="w-10 h-10 text-purple-400" />
+                  </div>
                   <h2 className="text-xl font-bold text-gray-900 mb-2">Security Settings</h2>
                   <p className="text-gray-500">Security settings such as two-factor authentication and active sessions are managed by your system administrator.</p>
                 </motion.div>
@@ -430,10 +434,12 @@ export default function SettingsPage() {
               {/* Data Management Section (Placeholder) */}
               {activeSection === 'data' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-12 text-center max-w-lg mx-auto">
-                  <Database className="w-16 h-16 text-gray-300 mb-4" />
+                  <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mb-5 border border-blue-100">
+                    <Database className="w-10 h-10 text-blue-400" />
+                  </div>
                   <h2 className="text-xl font-bold text-gray-900 mb-2">Data Management</h2>
                   <p className="text-gray-500 mb-6">Export or import your task data across platforms.</p>
-                  <button onClick={() => toast('Export feature coming soon', { icon: '🚧' })} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                  <button onClick={() => toast('Export feature coming soon', { icon: '🚧' })} className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm shadow-sm">
                     Export All Tasks
                   </button>
                 </motion.div>
@@ -442,7 +448,9 @@ export default function SettingsPage() {
               {/* Backup & Restore Section (Placeholder) */}
               {activeSection === 'backup' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-12 text-center max-w-lg mx-auto">
-                  <HardDrive className="w-16 h-16 text-gray-300 mb-4" />
+                  <div className="w-20 h-20 bg-green-50 rounded-2xl flex items-center justify-center mb-5 border border-green-100">
+                    <HardDrive className="w-10 h-10 text-green-400" />
+                  </div>
                   <h2 className="text-xl font-bold text-gray-900 mb-2">Backup & Restore</h2>
                   <p className="text-gray-500">Automated daily backups are enabled by default. Restore functionality is available upon request to support.</p>
                 </motion.div>

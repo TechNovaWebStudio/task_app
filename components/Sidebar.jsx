@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, CheckSquare, Calendar, BarChart3, Tag, Tags,
-  User, Settings, LogOut, Rocket, X, Bell, Activity, ChevronLeft, ChevronRight, Clock
+  User, Settings, LogOut, X, Bell, Activity, ChevronLeft, ChevronRight, Clock
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { notificationApi } from '@/services/notificationApi';
@@ -52,56 +52,59 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-white relative">
       {/* Logo */}
-      <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} p-6 border-b border-purple-100`}>
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-200 shrink-0">
+      <div className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'justify-between px-5'} py-5 border-b border-gray-100`}>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-200 flex-shrink-0">
             <CheckSquare className="w-5 h-5 text-white" />
           </div>
           {!isCollapsed && (
-            <span className="text-xl font-bold bg-gradient-to-r from-purple-700 to-indigo-600 bg-clip-text text-transparent truncate">
+            <span className="text-lg font-extrabold bg-gradient-to-r from-purple-700 to-indigo-600 bg-clip-text text-transparent truncate">
               TodoApp
             </span>
           )}
         </div>
-        {/* Mobile close */}
         {!isCollapsed && (
-          <button onClick={onClose} className="lg:hidden p-1.5 rounded-lg hover:bg-purple-50 text-gray-500">
-            <X className="w-5 h-5" />
+          <button
+            onClick={onClose}
+            className="lg:hidden p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+            aria-label="Close sidebar"
+          >
+            <X className="w-4 h-4" />
           </button>
         )}
       </div>
 
       {/* Navigation */}
-      <nav className={`flex-1 overflow-y-auto ${isCollapsed ? 'px-2 py-4' : 'p-4'} space-y-1`}>
+      <nav className={`flex-1 overflow-y-auto py-3 ${isCollapsed ? 'px-2 space-y-1' : 'px-3 space-y-0.5'}`}>
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
           const isNotification = item.href === '/notifications';
-          
+
           return (
             <Link
               key={item.href}
               href={item.href}
-              onClick={() => { if (window.innerWidth < 1024) onClose(); }}
-              className={`flex items-center gap-3 ${isCollapsed ? 'justify-center px-2 py-3' : 'px-4 py-2.5'} rounded-xl text-sm font-medium transition-all duration-200 group relative ${
+              onClick={() => { if (typeof window !== 'undefined' && window.innerWidth < 1024) onClose(); }}
+              className={`flex items-center gap-3 ${isCollapsed ? 'justify-center px-2 py-3' : 'px-3 py-2.5'} rounded-xl text-sm font-semibold transition-all duration-200 group relative ${
                 isActive
                   ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-200'
                   : 'text-gray-600 hover:bg-purple-50 hover:text-purple-700'
               }`}
               title={isCollapsed ? item.label : ''}
             >
-              <div className="relative shrink-0">
-                <item.icon className={`w-5 h-5 transition-transform group-hover:scale-110 ${isActive ? 'text-white' : ''}`} />
+              <div className="relative flex-shrink-0">
+                <item.icon className={`w-5 h-5 transition-transform group-hover:scale-105 ${isActive ? 'text-white' : ''}`} />
                 {isNotification && unreadCount > 0 && isCollapsed && (
-                  <span className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                  <span className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
                 )}
               </div>
-              
+
               {!isCollapsed && (
                 <>
-                  <span className="flex-1">{item.label}</span>
+                  <span className="flex-1 truncate">{item.label}</span>
                   {isNotification && unreadCount > 0 && (
-                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      {unreadCount}
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                      {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
                 </>
@@ -111,34 +114,33 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
         })}
       </nav>
 
-     
-
-      {/* Admin Info */}
-      <div className={`p-4 border-t border-purple-100 flex items-center ${isCollapsed ? 'justify-center flex-col gap-3' : 'gap-3'}`}>
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+      {/* User Info */}
+      <div className={`border-t border-gray-100 p-3 flex items-center ${isCollapsed ? 'justify-center flex-col gap-2' : 'gap-3'}`}>
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
           {admin?.name?.charAt(0)?.toUpperCase() || 'A'}
         </div>
         {!isCollapsed && (
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-800 truncate">{admin?.name || 'Admin'}</p>
-            <p className="text-xs text-gray-500 capitalize">{admin?.role || 'Admin'}</p>
+            <p className="text-sm font-bold text-gray-800 truncate">{admin?.name || 'Admin'}</p>
+            <p className="text-xs text-gray-400 capitalize font-medium">{admin?.role || 'Admin'}</p>
           </div>
         )}
         <button
           onClick={handleLogout}
-          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors shrink-0"
+          className="p-2 rounded-xl hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
           title="Logout"
         >
           <LogOut className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Collapse Toggle Button - Desktop Only */}
-      <button 
+      {/* Collapse Toggle - Desktop Only */}
+      <button
         onClick={onToggleCollapse}
-        className="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white border border-gray-200 rounded-full items-center justify-center text-gray-500 hover:text-purple-600 hover:border-purple-200 shadow-sm z-10"
+        className="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white border border-gray-200 rounded-full items-center justify-center text-gray-500 hover:text-purple-600 hover:border-purple-200 shadow-sm z-10 transition-all"
+        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
-        {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        {isCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
       </button>
     </div>
   );
@@ -158,7 +160,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+              className="fixed inset-0 bg-black/50 z-30 lg:hidden backdrop-blur-sm"
               onClick={onClose}
             />
             <motion.aside

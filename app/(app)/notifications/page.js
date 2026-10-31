@@ -78,25 +78,46 @@ export default function NotificationsPage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-4xl mx-auto w-full pb-20 lg:pb-6">
+      {/* Premium Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div className="flex items-center gap-3">
+          <div className="w-1 h-6 bg-gradient-to-b from-purple-600 to-indigo-600 rounded-full" />
           <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
           {meta.unreadCount > 0 && (
-            <span className="bg-purple-100 text-purple-700 py-1 px-3 rounded-full text-xs font-semibold">
+            <span className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-0.5 px-3 rounded-full text-xs font-semibold shadow-sm">
               {meta.unreadCount} unread
             </span>
           )}
         </div>
         <div className="flex items-center gap-3">
-          <div className="bg-gray-100 p-1 rounded-lg flex">
-            <button onClick={() => { setFilter('all'); setPage(1); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+          {/* Filter tabs */}
+          <div className="bg-gray-100 p-1 rounded-xl flex gap-1">
+            <button
+              onClick={() => { setFilter('all'); setPage(1); }}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                filter === 'all'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
               All
             </button>
-            <button onClick={() => { setFilter('unread'); setPage(1); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'unread' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            <button
+              onClick={() => { setFilter('unread'); setPage(1); }}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                filter === 'unread'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
               Unread
             </button>
           </div>
-          <button onClick={handleMarkAllRead} className="text-sm text-purple-600 hover:text-purple-700 font-medium px-3 py-1.5">
+          {/* Mark All Read — purple outlined button */}
+          <button
+            onClick={handleMarkAllRead}
+            className="text-sm text-purple-600 hover:text-purple-700 font-medium px-3 py-1.5 border border-purple-200 rounded-xl hover:bg-purple-50 transition-colors"
+          >
             Mark all read
           </button>
         </div>
@@ -107,12 +128,13 @@ export default function NotificationsPage() {
           <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
         </div>
       ) : notifications.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Bell className="w-8 h-8 text-gray-400" />
+        /* Premium Empty State */
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+            <Bell className="w-8 h-8 text-purple-400" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">No notifications yet</h3>
-          <p className="text-gray-500">You're all caught up!</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">No notifications yet</h3>
+          <p className="text-gray-500 text-sm">You're all caught up!</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -123,10 +145,14 @@ export default function NotificationsPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className={`flex gap-4 p-4 rounded-xl border transition-colors ${notif.read ? 'bg-white border-gray-100' : 'bg-purple-50/50 border-purple-100'}`}
+                className={`flex gap-4 p-4 rounded-2xl border shadow-sm transition-colors ${
+                  notif.read
+                    ? 'bg-white border-gray-100'
+                    : 'bg-purple-50/30 border-purple-100 border-l-4 border-l-purple-500'
+                }`}
               >
                 <div className="mt-1 flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-purple-50 border border-purple-100 flex items-center justify-center shadow-sm">
                     {getIcon(notif.type)}
                   </div>
                 </div>
@@ -135,19 +161,25 @@ export default function NotificationsPage() {
                     <h4 className={`text-base ${notif.read ? 'font-medium text-gray-800' : 'font-semibold text-gray-900'}`}>
                       {notif.title}
                     </h4>
-                    <span className="text-xs text-gray-500 whitespace-nowrap">
+                    <span className="text-xs text-gray-400 whitespace-nowrap">
                       {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 mb-3">{notif.message}</p>
-                  
+
                   <div className="flex items-center gap-3">
                     {!notif.read && (
-                      <button onClick={() => handleMarkRead(notif._id)} className="flex items-center gap-1 text-xs font-medium text-purple-600 hover:text-purple-700">
+                      <button
+                        onClick={() => handleMarkRead(notif._id)}
+                        className="flex items-center gap-1 text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors"
+                      >
                         <Check className="w-3.5 h-3.5" /> Mark as read
                       </button>
                     )}
-                    <button onClick={() => handleDelete(notif._id)} className="flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-red-500 transition-colors">
+                    <button
+                      onClick={() => handleDelete(notif._id)}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-red-500 transition-colors"
+                    >
                       <Trash2 className="w-3.5 h-3.5" /> Delete
                     </button>
                   </div>
@@ -158,11 +190,19 @@ export default function NotificationsPage() {
 
           {meta.pages > 1 && (
             <div className="flex justify-between items-center pt-6 pb-2">
-              <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="px-4 py-2 bg-white border border-gray-200 rounded-lg disabled:opacity-50 text-sm font-medium hover:bg-gray-50">
+              <button
+                disabled={page === 1}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                className="px-4 py-2 bg-white border border-gray-200 rounded-xl disabled:opacity-50 text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
                 Previous
               </button>
               <span className="text-sm text-gray-500">Page {page} of {meta.pages}</span>
-              <button disabled={page >= meta.pages} onClick={() => setPage(p => p + 1)} className="px-4 py-2 bg-white border border-gray-200 rounded-lg disabled:opacity-50 text-sm font-medium hover:bg-gray-50">
+              <button
+                disabled={page >= meta.pages}
+                onClick={() => setPage(p => p + 1)}
+                className="px-4 py-2 bg-white border border-gray-200 rounded-xl disabled:opacity-50 text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
                 Next
               </button>
             </div>

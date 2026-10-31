@@ -15,8 +15,9 @@ import {
   addDays, 
   isToday 
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, Clock, LayoutGrid, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Clock, Calendar as CalendarIcon, CheckCircle2, Circle } from 'lucide-react';
 import { taskApi } from '@/services/taskApi';
+import toast from 'react-hot-toast';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
 import EmptyState from '@/components/EmptyState';
 import ErrorState from '@/components/ErrorState';
@@ -27,7 +28,6 @@ export default function CalendarPage() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [view, setView] = useState('month'); // 'month' or 'week'
 
   const fetchMonthTasks = async (date) => {
     try {
@@ -35,11 +35,9 @@ export default function CalendarPage() {
       setError(null);
       const month = date.getMonth() + 1;
       const year = date.getFullYear();
-      
       const res = await taskApi.getTasks({ month, year, limit: 500 });
       setTasks(res.data.data || []);
     } catch (err) {
-      console.error('Failed to fetch calendar tasks:', err);
       setError('Failed to load tasks. Please try again.');
     } finally {
       setLoading(false);
@@ -50,6 +48,12 @@ export default function CalendarPage() {
     fetchMonthTasks(currentMonth);
   }, [currentMonth]);
 
+  useEffect(() => {
+    const handler = () => fetchMonthTasks(currentMonth);
+    window.addEventListener('tasks-changed', handler);
+    return () => window.removeEventListener('tasks-changed', handler);
+  }, [currentMonth]);
+
   const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const handleToday = () => {
@@ -58,11 +62,11 @@ export default function CalendarPage() {
     setSelectedDate(now);
   };
 
-  // Calendar Grid generation
+  // Monday-first calendar grid
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
-  const startDate = startOfWeek(monthStart);
-  const endDate = endOfWeek(monthEnd);
+  const startDate = startOfWeek(monthStart, { weekStartsOn: 1 }); // Monday start
+  const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
 
   const calendarDays = useMemo(() => {
     const days = [];
@@ -72,9 +76,8 @@ export default function CalendarPage() {
       day = addDays(day, 1);
     }
     return days;
-  }, [startDate, endDate]);
+  }, [startDate.getTime(), endDate.getTime()]);
 
-  // Tasks filtered for the selected date, sorted by creation order
   const dayTasks = useMemo(() => {
     if (!selectedDate) return [];
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -82,7 +85,7 @@ export default function CalendarPage() {
       .filter(task => (task.date || task.dates?.[0]?.date || task.dates?.[0]) === dateStr)
       .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   }, [tasks, selectedDate]);
-  
+
   const dailyStats = useMemo(() => {
     const total = dayTasks.length;
     const completed = dayTasks.filter(t => t.status === 'completed').length;
@@ -91,66 +94,60 @@ export default function CalendarPage() {
     return { total, completed, nonCompleted, progress };
   }, [dayTasks]);
 
-  const getStatusColor = (status) => {
-    return status === 'completed' ? 'bg-emerald-500' : 'bg-amber-500';
+  const handleToggleComplete = async (task) => {
+    try {
+      const isCompleted = task.status === 'completed';
+      if (isCompleted) {
+        await taskApi.pendingTask(task._id);
+        toast.success('Task marked as pending');
+      } else {
+        await taskApi.completeTask(task._id);
+        toast.success('Task completed!');
+      }
+      fetchMonthTasks(currentMonth);
+    } catch (err) {
+      toast.error('Failed to update task');
+    }
   };
 
-  const getStatusBorder = (status) => {
-    return status === 'completed' ? 'border-emerald-500' : 'border-amber-500';
-  };
+  const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto flex flex-col gap-5 w-full pb-20 lg:pb-6">
+    <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl mx-auto flex flex-col gap-4 sm:gap-5 w-full pb-20 lg:pb-6">
       
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm">
         <div>
           <h1 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <div className="w-1 h-6 bg-gradient-to-b from-purple-600 to-indigo-600 rounded-full" />
             <CalendarIcon className="w-5 sm:w-6 h-5 sm:h-6 text-purple-600" />
             Calendar
           </h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">Manage your tasks by date.</p>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">View and manage your tasks by date.</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-          <div className="flex bg-gray-100 p-1 rounded-lg">
-            <button
-              onClick={() => setView('month')}
-              className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${view === 'month' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Month
-            </button>
-            <button
-              onClick={() => setView('week')}
-              className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${view === 'week' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Week
-            </button>
-          </div>
-
-          <div className="h-8 w-px bg-gray-200 hidden md:block"></div>
-
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
             <button 
               onClick={handlePrevMonth}
-              className="p-1.5 sm:p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-colors"
+              className="p-2 text-gray-500 hover:bg-purple-50 hover:text-purple-700 rounded-xl transition-colors border border-gray-200"
             >
-              <ChevronLeft className="w-4 sm:w-5 h-4 sm:h-5" />
+              <ChevronLeft className="w-4 h-4" />
             </button>
-            <h2 className="text-base sm:text-lg font-bold text-gray-900 w-32 sm:w-36 text-center text-xs sm:text-base">
-              {format(currentMonth, 'MMM yyyy')}
+            <h2 className="text-sm sm:text-base font-bold text-gray-900 min-w-[110px] sm:min-w-[130px] text-center">
+              {format(currentMonth, 'MMMM yyyy')}
             </h2>
             <button 
               onClick={handleNextMonth}
-              className="p-1.5 sm:p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-colors"
+              className="p-2 text-gray-500 hover:bg-purple-50 hover:text-purple-700 rounded-xl transition-colors border border-gray-200"
             >
-              <ChevronRight className="w-4 sm:w-5 h-4 sm:h-5" />
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
           
           <button 
             onClick={handleToday}
-            className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+            className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all shadow-sm"
           >
             Today
           </button>
@@ -160,22 +157,25 @@ export default function CalendarPage() {
       {error ? (
         <ErrorState message={error} onRetry={() => fetchMonthTasks(currentMonth)} />
       ) : (
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 flex-1">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 flex-1">
           {/* LEFT COLUMN: CALENDAR GRID */}
-          <div className="lg:w-[65%] bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+          <div className="lg:w-[62%] bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             {/* Day Headers */}
-            <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  {day}
+            <div className="grid grid-cols-7 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-indigo-50">
+              {WEEKDAYS.map((day, i) => (
+                <div key={day} className={`py-2.5 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider ${
+                  i >= 5 ? 'text-purple-400' : 'text-gray-500'
+                }`}>
+                  <span className="hidden sm:inline">{day}</span>
+                  <span className="sm:hidden">{day.charAt(0)}</span>
                 </div>
               ))}
             </div>
 
             {/* Grid */}
-            <div className="grid grid-cols-7 flex-1 auto-rows-fr">
+            <div className="grid grid-cols-7">
               {loading && tasks.length === 0 ? (
-                <div className="col-span-7 p-10">
+                <div className="col-span-7 p-8">
                   <LoadingSkeleton type="cards" />
                 </div>
               ) : (
@@ -184,54 +184,76 @@ export default function CalendarPage() {
                   const isSelected = selectedDate && isSameDay(day, selectedDate);
                   const isCurrentMonth = isSameMonth(day, currentMonth);
                   const isDayToday = isToday(day);
+                  const dayIndex = i % 7; // 0=Mon, 5=Sat, 6=Sun
+                  const isWeekend = dayIndex === 5 || dayIndex === 6;
                   
                   const tasksForDay = tasks.filter(t => (t.date || t.dates?.[0]?.date || t.dates?.[0]) === dayStr);
-                  const displayTasks = tasksForDay.slice(0, 3);
-                  const remainingCount = tasksForDay.length - 3;
+                  const completedCount = tasksForDay.filter(t => t.status === 'completed').length;
+                  const pendingCount = tasksForDay.length - completedCount;
 
                   return (
                     <div 
                       key={dayStr}
                       onClick={() => setSelectedDate(day)}
-                      className={`min-h-[70px] sm:min-h-[90px] md:min-h-[100px] border-b border-r border-gray-50 p-1 sm:p-2 cursor-pointer transition-colors relative group
-                        ${!isCurrentMonth ? 'bg-gray-50/50' : 'bg-white hover:bg-purple-50/30'}
-                        ${isSelected ? 'ring-2 ring-inset ring-purple-500 bg-purple-50/10' : ''}
+                      className={`min-h-[42px] sm:min-h-[72px] md:min-h-[88px] border-b border-r border-gray-100 p-1 sm:p-2 cursor-pointer transition-colors relative
+                        ${!isCurrentMonth ? 'bg-gray-50/70' : isSelected ? 'bg-purple-50/60' : 'bg-white hover:bg-purple-50/30'}
+                        ${isSelected ? 'ring-2 ring-inset ring-purple-400' : ''}
                         ${i % 7 === 6 ? 'border-r-0' : ''}
                       `}
                     >
-                      <div className="flex justify-between items-start mb-1">
-                        <span className={`w-7 h-7 flex items-center justify-center rounded-full text-sm font-medium
-                          ${isDayToday ? 'bg-purple-600 text-white font-bold shadow-md' : 
-                            !isCurrentMonth ? 'text-gray-400' : 'text-gray-700 group-hover:text-purple-700'
-                          }
-                        `}>
+                      <div className="flex justify-between items-start">
+                        <span className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full text-[11px] sm:text-sm font-semibold transition-all ${
+                          isDayToday 
+                            ? 'bg-gradient-to-br from-purple-600 to-indigo-600 text-white font-bold shadow-sm' 
+                            : isSelected && !isDayToday
+                            ? 'bg-purple-100 text-purple-700 font-bold'
+                            : !isCurrentMonth 
+                            ? 'text-gray-400' 
+                            : isWeekend
+                            ? 'text-purple-400'
+                            : 'text-gray-700'
+                        }`}>
                           {format(day, 'd')}
                         </span>
-                        
-                        {/* Mobile dots indicator */}
-                        <div className="md:hidden flex gap-0.5 mt-1">
-                          {displayTasks.map((t, idx) => (
-                            <span key={idx} className={`w-1.5 h-1.5 rounded-full ${getStatusColor(t.status)}`}></span>
-                          ))}
-                        </div>
                       </div>
 
-                      {/* Desktop task list */}
-                      <div className="hidden md:flex flex-col gap-1 mt-2">
-                        {displayTasks.map(t => (
-                          <div 
-                            key={t._id} 
-                            className={`text-[10px] leading-tight px-1.5 py-1 rounded truncate border-l-2 ${getStatusBorder(t.status)} bg-gray-50 font-medium`}
-                          >
-                            {t.title}
-                          </div>
-                        ))}
-                        {remainingCount > 0 && (
-                          <div className="text-[10px] font-medium text-gray-500 px-1">
-                            +{remainingCount} more
-                          </div>
-                        )}
-                      </div>
+                      {/* Task dots - mobile */}
+                      {tasksForDay.length > 0 && (
+                        <div className="flex gap-0.5 mt-1 flex-wrap">
+                          {completedCount > 0 && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                          )}
+                          {pendingCount > 0 && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+                          )}
+                          {tasksForDay.length > 2 && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Task labels - desktop/tablet */}
+                      {tasksForDay.length > 0 && (
+                        <div className="hidden md:flex flex-col gap-0.5 mt-1">
+                          {tasksForDay.slice(0, 2).map(t => (
+                            <div 
+                              key={t._id} 
+                              className={`text-[9px] leading-tight px-1 py-0.5 rounded truncate font-medium border-l-2 ${
+                                t.status === 'completed'
+                                  ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
+                                  : 'border-amber-400 bg-amber-50 text-amber-800'
+                              }`}
+                            >
+                              {t.title}
+                            </div>
+                          ))}
+                          {tasksForDay.length > 2 && (
+                            <div className="text-[9px] font-semibold text-gray-500 px-1">
+                              +{tasksForDay.length - 2} more
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })
@@ -240,88 +262,109 @@ export default function CalendarPage() {
           </div>
 
           {/* RIGHT COLUMN: TASK LIST FOR SELECTED DATE */}
-          <div className="lg:w-[35%] bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col lg:max-h-[700px]">
-            <div className="p-5 border-b border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900 flex items-center justify-between">
+          <div className="lg:w-[38%] bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col lg:max-h-[700px]">
+            <div className="p-4 sm:p-5 border-b border-gray-100">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">
                 {selectedDate ? format(selectedDate, 'EEEE, MMMM d') : 'Select a date'}
               </h2>
               {dayTasks.length > 0 && (
                 <div className="mt-3 grid grid-cols-4 gap-2 text-center text-xs font-medium">
-                  <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
-                    <span className="block text-gray-500 mb-1">Total</span>
+                  <div className="bg-gray-50 rounded-xl p-2 border border-gray-100">
+                    <span className="block text-gray-400 mb-1 text-[10px] uppercase tracking-wide">Total</span>
                     <span className="text-sm font-bold text-gray-900">{dailyStats.total}</span>
                   </div>
-                  <div className="bg-emerald-50 rounded-lg p-2 border border-emerald-100">
-                    <span className="block text-emerald-600 mb-1">Completed</span>
+                  <div className="bg-emerald-50 rounded-xl p-2 border border-emerald-100">
+                    <span className="block text-emerald-500 mb-1 text-[10px] uppercase tracking-wide">Done</span>
                     <span className="text-sm font-bold text-emerald-700">{dailyStats.completed}</span>
                   </div>
-                  <div className="bg-amber-50 rounded-lg p-2 border border-amber-100">
-                    <span className="block text-amber-600 mb-1">Non Completed</span>
+                  <div className="bg-amber-50 rounded-xl p-2 border border-amber-100">
+                    <span className="block text-amber-500 mb-1 text-[10px] uppercase tracking-wide">Left</span>
                     <span className="text-sm font-bold text-amber-700">{dailyStats.nonCompleted}</span>
                   </div>
-                  <div className="bg-purple-50 rounded-lg p-2 border border-purple-100">
-                    <span className="block text-purple-600 mb-1">Progress</span>
+                  <div className="bg-purple-50 rounded-xl p-2 border border-purple-100">
+                    <span className="block text-purple-500 mb-1 text-[10px] uppercase tracking-wide">Progress</span>
                     <span className="text-sm font-bold text-purple-700">{dailyStats.progress}%</span>
                   </div>
                 </div>
               )}
             </div>
             
-            <div className="p-5 flex-1 overflow-y-auto">
+            <div className="p-4 sm:p-5 flex-1 overflow-y-auto">
               {loading && tasks.length === 0 ? (
                 <LoadingSkeleton type="list" rows={4} />
               ) : dayTasks.length > 0 ? (
                 <div className="space-y-3">
                   {dayTasks.map(task => {
                     const isCompleted = task.status === 'completed';
+                    const isFuture = task.date > format(new Date(), 'yyyy-MM-dd');
                     return (
-                    <div 
-                      key={task._id} 
-                      className={`p-3 rounded-xl border border-gray-100 bg-gray-50 flex gap-3 hover:shadow-md transition-shadow
-                        border-l-4 ${getStatusBorder(task.status)}
-                      `}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <h4 className={`text-sm font-semibold truncate ${isCompleted ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
-                            {task.title}
-                          </h4>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap capitalize font-medium
-                            ${isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}
-                          `}>
-                            {isCompleted ? 'Completed' : 'Non Completed'}
-                          </span>
-                        </div>
-                        
-                        <div className="flex flex-wrap items-center gap-2 mt-2">
-                          {(task.time || task.dueTime) && (
-                            <span className="flex items-center gap-1 text-[11px] text-gray-500 font-medium">
-                              <Clock className="w-3 h-3" />
-                              {task.time || task.dueTime}
-                            </span>
-                          )}
+                      <div 
+                        key={task._id} 
+                        className={`p-3 rounded-xl border transition-all hover:shadow-sm ${
+                          isCompleted 
+                            ? 'border-emerald-100 bg-emerald-50/40' 
+                            : 'border-amber-100 bg-amber-50/20'
+                        }`}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <button
+                            onClick={() => !isFuture && handleToggleComplete(task)}
+                            disabled={isFuture}
+                            className={`flex-shrink-0 mt-0.5 transition-all ${isFuture ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+                            title={isFuture ? 'Cannot complete future tasks' : isCompleted ? 'Mark as pending' : 'Mark as completed'}
+                          >
+                            {isCompleted ? (
+                              <CheckCircle2 className="w-4.5 h-4.5 text-emerald-500" style={{width:'18px',height:'18px'}} />
+                            ) : (
+                              <Circle className={`text-gray-300 hover:text-purple-500 transition-colors`} style={{width:'18px',height:'18px'}} />
+                            )}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <h4 className={`text-sm font-semibold truncate ${isCompleted ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                              {task.title}
+                            </h4>
+                            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                              {(task.time || task.dueTime) && (
+                                <span className="flex items-center gap-1 text-[10px] text-gray-500 font-medium">
+                                  <Clock className="w-3 h-3" />
+                                  {task.time || task.dueTime}
+                                </span>
+                              )}
+                              {task.category && (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-100">
+                                  {task.category}
+                                </span>
+                              )}
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap font-semibold ${
+                                isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {isCompleted ? 'Completed' : 'Pending'}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )})}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="h-full flex items-center justify-center">
                   <EmptyState 
-                    icon={LayoutGrid}
+                    icon={CalendarIcon}
                     title="No tasks scheduled"
-                    description={`You have no tasks scheduled for ${selectedDate ? format(selectedDate, 'MMM d') : 'this day'}.`}
+                    description={`No tasks for ${selectedDate ? format(selectedDate, 'MMM d') : 'this day'}.`}
                   />
                 </div>
               )}
             </div>
             
+            {/* Add Task button */}
             <div className="p-4 border-t border-gray-100">
               <Link 
                 href="/tasks"
-                className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 rounded-xl transition-colors shadow-sm"
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-2.5 rounded-xl transition-all shadow-sm text-sm"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-4 h-4" />
                 Add Task
               </Link>
             </div>
@@ -331,4 +374,3 @@ export default function CalendarPage() {
     </div>
   );
 }
-

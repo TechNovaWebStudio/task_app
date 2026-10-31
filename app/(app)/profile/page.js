@@ -112,16 +112,21 @@ export default function ProfilePage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-6xl mx-auto space-y-6 w-full pb-20 lg:pb-6">
-      <h1 className="text-2xl font-bold text-gray-800">My Profile</h1>
+      {/* Page Heading */}
+      <div className="flex items-center gap-3">
+        <div className="w-1 h-8 bg-gradient-to-b from-purple-600 to-indigo-600 rounded-full" />
+        <h1 className="text-2xl font-bold text-gray-800">My Profile</h1>
+      </div>
       
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left Sidebar */}
         <div className="w-full lg:w-1/3">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden sticky top-6">
-            <div className="h-32 bg-gradient-to-r from-purple-500 to-indigo-600"></div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-6">
+            {/* Cover Banner */}
+            <div className="h-32 bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-800" />
             <div className="px-6 pb-6 relative">
               <div className="flex justify-center">
-                <div className="w-24 h-24 rounded-full border-4 border-white bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center text-3xl font-bold text-purple-700 -mt-12 overflow-hidden bg-white">
+                <div className="w-24 h-24 rounded-full ring-4 ring-white shadow-xl bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center text-3xl font-bold text-purple-700 -mt-12 overflow-hidden">
                   {profile.avatar ? (
                     <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
@@ -139,15 +144,15 @@ export default function ProfilePage() {
               
               <div className="mt-6 flex flex-col space-y-3 border-t border-gray-100 pt-6">
                 <div className="flex items-center text-sm text-gray-600">
-                  <Mail className="w-4 h-4 mr-3 text-gray-400" />
+                  <Mail className="w-4 h-4 mr-3 text-purple-400" />
                   {profile.email}
                 </div>
                 <div className="flex items-center text-sm text-gray-600">
-                  <Calendar className="w-4 h-4 mr-3 text-gray-400" />
+                  <Calendar className="w-4 h-4 mr-3 text-purple-400" />
                   Member since {formatDate(profile.createdAt)}
                 </div>
                 <div className="flex items-center text-sm text-gray-600">
-                  <Clock className="w-4 h-4 mr-3 text-gray-400" />
+                  <Clock className="w-4 h-4 mr-3 text-purple-400" />
                   Last login: {profile.lastLogin ? new Date(profile.lastLogin).toLocaleDateString() : 'Unknown'}
                 </div>
               </div>
@@ -155,7 +160,7 @@ export default function ProfilePage() {
               <div className="mt-6">
                 <button 
                   onClick={() => { setActiveTab('personal'); setEditMode(true); }}
-                  className="w-full py-2 px-4 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors text-sm font-medium"
+                  className="w-full py-2.5 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:opacity-90 transition-opacity text-sm font-medium shadow-sm"
                 >
                   Edit Profile
                 </button>
@@ -166,13 +171,13 @@ export default function ProfilePage() {
         
         {/* Right Content */}
         <div className="w-full lg:w-2/3">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             {/* Tabs */}
             <div className="flex border-b border-gray-200">
               <button
                 onClick={() => setActiveTab('personal')}
                 className={`flex-1 py-4 px-6 text-center text-sm font-medium transition-colors ${
-                  activeTab === 'personal' ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  activeTab === 'personal' ? 'text-purple-700 border-b-2 border-purple-600 bg-purple-50/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 Personal Information
@@ -180,7 +185,7 @@ export default function ProfilePage() {
               <button
                 onClick={() => setActiveTab('summary')}
                 className={`flex-1 py-4 px-6 text-center text-sm font-medium transition-colors ${
-                  activeTab === 'summary' ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  activeTab === 'summary' ? 'text-purple-700 border-b-2 border-purple-600 bg-purple-50/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 Task Summary
@@ -188,7 +193,7 @@ export default function ProfilePage() {
               <button
                 onClick={() => setActiveTab('activity')}
                 className={`flex-1 py-4 px-6 text-center text-sm font-medium transition-colors ${
-                  activeTab === 'activity' ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  activeTab === 'activity' ? 'text-purple-700 border-b-2 border-purple-600 bg-purple-50/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 Recent Activity
@@ -200,7 +205,7 @@ export default function ProfilePage() {
               {activeTab === 'personal' && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-medium text-gray-900">Account Details</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Account Details</h3>
                     {!editMode && (
                       <button onClick={() => setEditMode(true)} className="text-sm text-purple-600 hover:text-purple-700 font-medium">
                         Edit
@@ -216,7 +221,7 @@ export default function ProfilePage() {
                           <input 
                             type="text" 
                             {...registerProfile('name', { required: 'Name is required' })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
                           />
                           {profileErrors.name && <p className="mt-1 text-sm text-red-600">{profileErrors.name.message}</p>}
                         </div>
@@ -225,7 +230,7 @@ export default function ProfilePage() {
                           <input 
                             type="email" 
                             {...registerProfile('email', { required: 'Email is required', pattern: { value: /^\S+@\S+$/i, message: 'Invalid email' } })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
                           />
                           {profileErrors.email && <p className="mt-1 text-sm text-red-600">{profileErrors.email.message}</p>}
                         </div>
@@ -234,7 +239,7 @@ export default function ProfilePage() {
                           <input 
                             type="text" 
                             {...registerProfile('avatar')}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
                             placeholder="https://example.com/avatar.jpg"
                           />
                         </div>
@@ -246,13 +251,13 @@ export default function ProfilePage() {
                             setEditMode(false);
                             resetProfile({ name: profile.name, email: profile.email, avatar: profile.avatar || '' });
                           }}
-                          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                          className="px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm"
                         >
                           Cancel
                         </button>
                         <button 
                           type="submit"
-                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                          className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:opacity-90 transition-opacity font-medium text-sm shadow-sm"
                         >
                           Save Changes
                         </button>
@@ -281,16 +286,17 @@ export default function ProfilePage() {
                     </div>
                   )}
                   
+                  {/* Security Section */}
                   <div className="mt-10 pt-6 border-t border-gray-200">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Security</h3>
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Security</h3>
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
                       <div>
                         <div className="font-medium text-gray-900">Password</div>
                         <div className="text-sm text-gray-500 mt-1">Change your password to keep your account secure</div>
                       </div>
                       <button 
                         onClick={() => setShowPasswordModal(true)}
-                        className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                        className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium shadow-sm"
                       >
                         Change Password
                       </button>
@@ -302,21 +308,33 @@ export default function ProfilePage() {
               {/* Task Summary Tab */}
               {activeTab === 'summary' && stats && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                  <h3 className="text-lg font-medium text-gray-900 mb-6">Task Statistics</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-6">Task Statistics</h3>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     <div className="p-4 bg-purple-50 rounded-xl border border-purple-100 text-center">
-                      <div className="text-purple-500 mb-1 flex justify-center"><CheckCircle className="w-6 h-6" /></div>
-                      <div className="text-3xl font-bold text-purple-700">{stats.totalTasks || 0}</div>
+                      <div className="text-purple-500 mb-2 flex justify-center">
+                        <div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center">
+                          <CheckCircle className="w-5 h-5 text-purple-600" />
+                        </div>
+                      </div>
+                      <div className="text-3xl font-bold bg-gradient-to-r from-purple-700 to-indigo-600 bg-clip-text text-transparent">{stats.totalTasks || 0}</div>
                       <div className="text-xs font-medium text-purple-600 uppercase mt-1">Total Tasks</div>
                     </div>
                     <div className="p-4 bg-green-50 rounded-xl border border-green-100 text-center">
-                      <div className="text-green-500 mb-1 flex justify-center"><CheckCircle className="w-6 h-6" /></div>
+                      <div className="text-green-500 mb-2 flex justify-center">
+                        <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        </div>
+                      </div>
                       <div className="text-3xl font-bold text-green-700">{stats.completedTasks || 0}</div>
                       <div className="text-xs font-medium text-green-600 uppercase mt-1">Completed</div>
                     </div>
                     <div className="p-4 bg-orange-50 rounded-xl border border-orange-100 text-center">
-                      <div className="text-orange-500 mb-1 flex justify-center"><Clock className="w-6 h-6" /></div>
+                      <div className="text-orange-500 mb-2 flex justify-center">
+                        <div className="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center">
+                          <Clock className="w-5 h-5 text-orange-600" />
+                        </div>
+                      </div>
                       <div className="text-3xl font-bold text-orange-700">{stats.pendingTasks || 0}</div>
                       <div className="text-xs font-medium text-orange-600 uppercase mt-1">Pending</div>
                     </div>
@@ -326,7 +344,7 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Task Breakdown</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Task Breakdown</h3>
                   <div className="space-y-4">
                     <div>
                       <div className="flex justify-between text-sm mb-1">
@@ -353,14 +371,14 @@ export default function ProfilePage() {
               {/* Recent Activity Tab */}
               {activeTab === 'activity' && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                  <h3 className="text-lg font-medium text-gray-900 mb-6">Recent Activity</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-6">Recent Activity</h3>
                   
                   {recentActivity.length > 0 ? (
                     <div className="relative border-l-2 border-purple-200 ml-3 space-y-6 pb-4">
                       {recentActivity.map((activity, index) => (
                         <div key={index} className="relative pl-6">
-                          <div className="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-purple-500 border-2 border-white shadow"></div>
-                          <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                          <div className="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 border-2 border-white shadow-sm"></div>
+                          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
                             <p className="text-sm text-gray-800">{activity.description || activity.action}</p>
                             <span className="text-xs text-gray-500 mt-1 block">
                               {new Date(activity.createdAt).toLocaleString()}
@@ -387,11 +405,11 @@ export default function ProfilePage() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }} 
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden"
+            className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
           >
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-              <h3 className="text-lg font-semibold text-gray-900">Change Password</h3>
-              <button onClick={() => setShowPasswordModal(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-purple-600 to-indigo-600">
+              <h3 className="text-lg font-semibold text-white">Change Password</h3>
+              <button onClick={() => setShowPasswordModal(false)} className="text-white/80 hover:text-white text-xl leading-none">&times;</button>
             </div>
             
             <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="p-6 space-y-4">
@@ -400,7 +418,7 @@ export default function ProfilePage() {
                 <input 
                   type="password" 
                   {...registerPassword('currentPassword', { required: 'Current password is required' })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
                 />
                 {passwordErrors.currentPassword && <p className="mt-1 text-sm text-red-600">{passwordErrors.currentPassword.message}</p>}
               </div>
@@ -409,7 +427,7 @@ export default function ProfilePage() {
                 <input 
                   type="password" 
                   {...registerPassword('newPassword', { required: 'New password is required', minLength: { value: 6, message: 'Password must be at least 6 characters' } })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
                 />
                 {passwordErrors.newPassword && <p className="mt-1 text-sm text-red-600">{passwordErrors.newPassword.message}</p>}
               </div>
@@ -421,7 +439,7 @@ export default function ProfilePage() {
                     required: 'Please confirm your password',
                     validate: value => value === newPassword || 'Passwords do not match'
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
                 />
                 {passwordErrors.confirmPassword && <p className="mt-1 text-sm text-red-600">{passwordErrors.confirmPassword.message}</p>}
               </div>
@@ -430,13 +448,13 @@ export default function ProfilePage() {
                 <button 
                   type="button" 
                   onClick={() => setShowPasswordModal(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:opacity-90 transition-opacity font-medium text-sm shadow-sm"
                 >
                   Update Password
                 </button>
