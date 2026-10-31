@@ -1,18 +1,19 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { GripVertical, Move, Check, ArrowUpDown } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GripVertical } from 'lucide-react';
 import TaskCard from './TaskCard';
 
 /**
- * DraggableTaskList
- * 
- * Reordering is CONTROLLED:
- * - In normal mode: cards behave normally, no dragging
- * - In reorder mode: drag handles appear, user can drag to reorder
- * 
- * reorderMode and onToggleReorderMode are passed from parent.
- * If parent doesn't provide them, an internal toggle button is shown.
+ * DraggableTaskList — Smooth Framer Motion drag-to-reorder
+ *
+ * • Normal mode  : cards behave normally; no dragging possible
+ * • Reorder mode : grip handles appear; drag any task to any position
+ *                  with live animated insertion indicator & card shuffling
+ *
+ * Uses Pointer Events (works on touch + mouse) with Framer Motion
+ * layout animations for silky-smooth card repositioning.
  */
 export default function DraggableTaskList({
   tasks,
@@ -24,175 +25,300 @@ export default function DraggableTaskList({
   reorderMode: externalReorderMode,
   onToggleReorderMode: externalToggle,
 }) {
+  /* ─── Reorder mode (internal fallback if no parent control) ─── */
   const [internalReorderMode, setInternalReorderMode] = useState(false);
+  const reorderMode =
+    externalReorderMode !== undefined ? externalReorderMode : internalReorderMode;
+  // toggleReorderMode kept for potential standalone use
+  // eslint-disable-next-line no-unused-vars
+  const toggleReorderMode =
+    externalToggle || (() => setInternalReorderMode((v) => !v));
+
+  /* ─── Drag state ─── */
+  const [localTasks, setLocalTasks] = useState(tasks);
+  const [draggingId, setDraggingId]     = useState(null); // task._id being dragged
   const [draggingIndex, setDraggingIndex] = useState(null);
-  const [overIndex, setOverIndex] = useState(null);
+  const [overIndex, setOverIndex]       = useState(null);
 
-  // Use external or internal reorder mode
-  const reorderMode = externalReorderMode !== undefined ? externalReorderMode : internalReorderMode;
-  const toggleReorderMode = externalToggle || (() => setInternalReorderMode(v => !v));
+  // Sync localTasks when external tasks prop changes (e.g. after save/fetch)
+  useEffect(() => {
+    if (!draggingId) setLocalTasks(tasks);
+  }, [tasks, draggingId]);
 
-  const dragState = useRef({ active: false, startIndex: null, longPressTimer: null, startY: 0, activated: false });
-  const listRef = useRef(null);
+  /* ─── Refs ─── */
+  const listRef      = useRef(null);
+  const dragRef      = useRef({
+    active: false,
+    activated: false,
+    startIndex: null,
+    startY: 0,
+    longPressTimer: null,
+    pointerId: null,
+  });
   const overIndexRef = useRef(null);
 
-  const getItemRects = () => {
-    if (!listRef.current) return [];
-    return Array.from(listRef.current.querySelectorAll('[data-drag-item]')).map(el => el.getBoundingClientRect());
-  };
-
-  const getOverIndex = (clientY) => {
-    const rects = getItemRects();
-    for (let i = 0; i < rects.length; i++) {
-      const mid = rects[i].top + rects[i].height / 2;
+  /* ─────────────────────────────────────────────────────
+     Utility: compute which slot the pointer is hovering
+  ───────────────────────────────────────────────────── */
+  const getOverIndex = useCallback((clientY) => {
+    if (!listRef.current) return 0;
+    const items = Array.from(listRef.current.querySelectorAll('[data-drag-item]'));
+    for (let i = 0; i < items.length; i++) {
+      const rect = items[i].getBoundingClientRect();
+      const mid  = rect.top + rect.height / 2;
       if (clientY < mid) return i;
     }
-    return rects.length - 1;
-  };
+    return items.length - 1;
+  }, []);
 
-  const cancelDrag = () => {
-    clearTimeout(dragState.current.longPressTimer);
-    dragState.current.active = false;
-    dragState.current.activated = false;
-    dragState.current.startIndex = null;
+  /* ─────────────────────────────────────────────────────
+     Cancel / reset drag
+  ───────────────────────────────────────────────────── */
+  const cancelDrag = useCallback(() => {
+    clearTimeout(dragRef.current.longPressTimer);
+    dragRef.current.active    = false;
+    dragRef.current.activated = false;
+    dragRef.current.startIndex = null;
+    dragRef.current.pointerId  = null;
+    setDraggingId(null);
     setDraggingIndex(null);
     setOverIndex(null);
     overIndexRef.current = null;
-  };
+  }, []);
 
-  const handlePointerDown = (e, index) => {
-    if (!reorderMode) return; // Only allow dragging in reorder mode
-    if (e.button !== undefined && e.button !== 0) return;
+  /* ─────────────────────────────────────────────────────
+     Pointer handlers (attached to each grip handle)
+  ───────────────────────────────────────────────────── */
+  const handlePointerDown = useCallback((e, index, taskId) => {
+    if (!reorderMode) return;
+    if (e.button !== undefined && e.button !== 0) return; // left-click / touch only
+    e.preventDefault();
     e.stopPropagation();
-    dragState.current.startY = e.clientY;
-    dragState.current.startIndex = index;
-    dragState.current.active = true;
-    dragState.current.activated = false;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    dragState.current.longPressTimer = setTimeout(() => {
-      if (dragState.current.active) {
-        dragState.current.activated = true;
-        setDraggingIndex(dragState.current.startIndex);
-        setOverIndex(dragState.current.startIndex);
-        overIndexRef.current = dragState.current.startIndex;
-      }
-    }, 120);
-  };
 
-  const handlePointerMove = (e) => {
-    if (!dragState.current.active || !reorderMode) return;
-    const movedEnough = Math.abs(e.clientY - dragState.current.startY) > 5;
-    if (!dragState.current.activated && movedEnough) {
-      clearTimeout(dragState.current.longPressTimer);
-      dragState.current.active = false;
+    dragRef.current.active     = true;
+    dragRef.current.activated  = false;
+    dragRef.current.startIndex = index;
+    dragRef.current.startY     = e.clientY;
+    dragRef.current.pointerId  = e.pointerId;
+
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+
+    // Short delay prevents accidental drags on tap
+    dragRef.current.longPressTimer = setTimeout(() => {
+      if (dragRef.current.active) {
+        dragRef.current.activated = true;
+        setDraggingId(taskId);
+        setDraggingIndex(index);
+        setOverIndex(index);
+        overIndexRef.current = index;
+      }
+    }, 80);
+  }, [reorderMode]);
+
+  const handlePointerMove = useCallback((e) => {
+    if (!dragRef.current.active || !reorderMode) return;
+
+    const moved = Math.abs(e.clientY - dragRef.current.startY);
+
+    if (!dragRef.current.activated) {
+      // If user moves too much before long-press fires → cancel (scroll intent)
+      if (moved > 8) {
+        clearTimeout(dragRef.current.longPressTimer);
+        dragRef.current.active = false;
+      }
       return;
     }
-    if (dragState.current.activated) {
-      const newOver = getOverIndex(e.clientY);
+
+    const newOver = getOverIndex(e.clientY);
+    if (newOver !== overIndexRef.current) {
       overIndexRef.current = newOver;
       setOverIndex(newOver);
     }
-  };
+  }, [reorderMode, getOverIndex]);
 
-  const handlePointerUp = () => {
-    clearTimeout(dragState.current.longPressTimer);
-    if (dragState.current.activated && dragState.current.startIndex !== null && reorderMode) {
-      const from = dragState.current.startIndex;
-      const to = overIndexRef.current !== null ? overIndexRef.current : from;
+  const handlePointerUp = useCallback(() => {
+    clearTimeout(dragRef.current.longPressTimer);
+
+    if (
+      dragRef.current.activated &&
+      dragRef.current.startIndex !== null &&
+      reorderMode
+    ) {
+      const from = dragRef.current.startIndex;
+      const to   = overIndexRef.current !== null ? overIndexRef.current : from;
+
       if (from !== to) {
-        const newTasks = [...tasks];
-        const [moved] = newTasks.splice(from, 1);
-        newTasks.splice(to, 0, moved);
-        onReorder(newTasks);
+        const reordered = [...localTasks];
+        const [moved]   = reordered.splice(from, 1);
+        reordered.splice(to, 0, moved);
+        setLocalTasks(reordered);   // optimistic local update
+        onReorder(reordered);       // propagate to parent
       }
     }
-    cancelDrag();
-  };
 
-  if (!tasks || tasks.length === 0) return null;
+    cancelDrag();
+  }, [reorderMode, localTasks, onReorder, cancelDrag]);
+
+  /* ─────────────────────────────────────────────────────
+     Compute display order with live "ghost" re-insertion
+  ───────────────────────────────────────────────────── */
+  const displayTasks = (() => {
+    if (draggingIndex === null || overIndex === null || draggingIndex === overIndex) {
+      return localTasks;
+    }
+    const arr     = [...localTasks];
+    const [moved] = arr.splice(draggingIndex, 1);
+    arr.splice(overIndex, 0, moved);
+    return arr;
+  })();
+
+  if (!localTasks || localTasks.length === 0) return null;
 
   return (
     <div className="space-y-3">
-      {/* Reorder mode banner - shown only when using internal toggle */}
-      {externalReorderMode === undefined && (
-        <div className="flex items-center justify-between">
-          {reorderMode ? (
-            <div className="flex items-center justify-between w-full px-4 py-2.5 rounded-xl bg-purple-50 border-2 border-dashed border-purple-200 text-purple-700">
-              <div className="flex items-center gap-2">
-                <Move className="w-4 h-4" />
-                <span className="text-sm font-semibold">Reorder Mode — drag handles to rearrange</span>
-              </div>
-              <button
-                onClick={() => { toggleReorderMode(); cancelDrag(); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white text-xs font-bold rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                <Check className="w-3.5 h-3.5" />
-                Done
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={toggleReorderMode}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-xl border border-gray-200 hover:border-purple-200 transition-all"
-              title="Enable reorder mode"
-            >
-              <ArrowUpDown className="w-4 h-4" />
-              Reorder
-            </button>
-          )}
-        </div>
-      )}
+      {/* List */}
+      <div
+        ref={listRef}
+        className="space-y-2.5 select-none"
+        /* Global pointer-move/up on the container so events don't get lost */
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        onPointerCancel={cancelDrag}
+      >
+        <AnimatePresence initial={false}>
+          {displayTasks.map((task, index) => {
+            const isBeingDragged = task._id === draggingId;
+            const isDropTarget   =
+              overIndex === index &&
+              draggingId !== null &&
+              overIndex !== draggingIndex;
 
-      <div ref={listRef} className={`space-y-3 select-none ${reorderMode ? 'cursor-default' : ''}`}>
-        {tasks.map((task, index) => {
-          const isDragging = draggingIndex === index;
-          const isOver = overIndex === index && draggingIndex !== null && overIndex !== draggingIndex;
-          return (
-            <div key={task._id} data-drag-item className="relative">
-              {isOver && overIndex < draggingIndex && (
-                <div className="h-1 w-full bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full mb-2 opacity-80" />
-              )}
-
-              <div
-                className={`flex items-stretch gap-0 rounded-2xl transition-all duration-150 ${
-                  isDragging ? 'opacity-60 scale-[1.01] shadow-xl shadow-purple-100 z-50 relative ring-2 ring-purple-300' : 'opacity-100'
-                }`}
+            return (
+              <motion.div
+                key={task._id}
+                data-drag-item
+                layout
+                layoutId={task._id}
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{
+                  opacity: isBeingDragged ? 0.45 : 1,
+                  scale:   isBeingDragged ? 1.02  : 1,
+                  y: 0,
+                }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{
+                  layout:  { type: 'spring', stiffness: 400, damping: 35 },
+                  opacity: { duration: 0.15 },
+                  scale:   { duration: 0.15 },
+                }}
+                className="relative"
+                style={{ zIndex: isBeingDragged ? 50 : 'auto' }}
               >
-                {/* Drag Handle - only visible in reorder mode */}
-                {reorderMode && (
+                {/* ── Drop-zone indicator (top) ── */}
+                <AnimatePresence>
+                  {isDropTarget && overIndex < draggingIndex && (
+                    <motion.div
+                      key="indicator-top"
+                      initial={{ opacity: 0, scaleX: 0.5 }}
+                      animate={{ opacity: 1, scaleX: 1 }}
+                      exit={{ opacity: 0, scaleX: 0.5 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute -top-1.5 left-3 right-3 h-0.5 rounded-full z-10"
+                      style={{
+                        background:
+                          'linear-gradient(90deg, #8B16F9, #5635F5)',
+                        boxShadow: '0 0 8px rgba(139,22,249,0.5)',
+                      }}
+                    />
+                  )}
+                </AnimatePresence>
+
+                {/* ── Card row: grip + TaskCard ── */}
+                <div
+                  className={`flex items-stretch gap-0 rounded-2xl overflow-hidden transition-shadow duration-200 ${
+                    isBeingDragged
+                      ? 'shadow-2xl ring-2 ring-purple-400 ring-offset-1'
+                      : isDropTarget
+                      ? 'shadow-md'
+                      : ''
+                  }`}
+                >
+                  {/* Grip handle — only in reorder mode */}
+                  {reorderMode && (
+                    <div
+                      data-drag-handle
+                      onPointerDown={(e) => handlePointerDown(e, index, task._id)}
+                      className={`
+                        group/grip flex items-center justify-center
+                        w-10 flex-shrink-0 rounded-l-2xl
+                        cursor-grab active:cursor-grabbing
+                        transition-all duration-200
+                        touch-none select-none
+                        ${isBeingDragged
+                          ? 'bg-purple-100'
+                          : 'bg-gradient-to-b from-purple-50 to-purple-100/60 hover:from-purple-100 hover:to-purple-100'
+                        }
+                      `}
+                      title="Drag to reorder"
+                      style={{ touchAction: 'none' }}
+                    >
+                      <div className={`
+                        flex flex-col gap-[3px] items-center justify-center
+                        w-6 h-8 rounded-lg transition-all duration-200
+                        ${isBeingDragged
+                          ? 'scale-110'
+                          : 'group-hover/grip:scale-110'
+                        }
+                      `}>
+                        <GripVertical
+                          className={`w-4 h-4 transition-colors duration-200 ${
+                            isBeingDragged
+                              ? 'text-purple-600'
+                              : 'text-purple-300 group-hover/grip:text-purple-500'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TaskCard — pointer events disabled while dragging this card */}
                   <div
-                    data-drag-handle
-                    onPointerDown={(e) => handlePointerDown(e, index)}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={handlePointerUp}
-                    onPointerCancel={cancelDrag}
-                    className={`flex items-center justify-center w-8 flex-shrink-0 rounded-l-2xl cursor-grab active:cursor-grabbing transition-colors ${
-                      isDragging ? 'bg-purple-100 text-purple-500' : 'bg-purple-50 text-purple-400 hover:text-purple-600 hover:bg-purple-100'
-                    }`}
-                    title="Drag to reorder"
-                    style={{ touchAction: 'none' }}
+                    className={`flex-1 min-w-0 ${reorderMode ? 'rounded-r-2xl overflow-hidden' : ''}`}
+                    style={{ pointerEvents: isBeingDragged ? 'none' : 'auto' }}
                   >
-                    <GripVertical className="w-4 h-4" />
+                    <TaskCard
+                      task={task}
+                      onView={onView}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      onComplete={onComplete}
+                    />
                   </div>
-                )}
-
-                <div className={`flex-1 min-w-0 ${reorderMode ? 'rounded-r-2xl overflow-hidden' : ''}`}>
-                  <TaskCard
-                    task={task}
-                    onView={onView}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    onComplete={onComplete}
-                  />
                 </div>
-              </div>
 
-              {isOver && overIndex > draggingIndex && (
-                <div className="h-1 w-full bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full mt-2 opacity-80" />
-              )}
-            </div>
-          );
-        })}
+                {/* ── Drop-zone indicator (bottom) ── */}
+                <AnimatePresence>
+                  {isDropTarget && overIndex > draggingIndex && (
+                    <motion.div
+                      key="indicator-bottom"
+                      initial={{ opacity: 0, scaleX: 0.5 }}
+                      animate={{ opacity: 1, scaleX: 1 }}
+                      exit={{ opacity: 0, scaleX: 0.5 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute -bottom-1.5 left-3 right-3 h-0.5 rounded-full z-10"
+                      style={{
+                        background:
+                          'linear-gradient(90deg, #8B16F9, #5635F5)',
+                        boxShadow: '0 0 8px rgba(139,22,249,0.5)',
+                      }}
+                    />
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
       </div>
     </div>
   );

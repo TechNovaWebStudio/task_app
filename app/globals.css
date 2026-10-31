@@ -484,8 +484,8 @@ canvas { max-width: 100% !important; }
 
 /* Reorder mode banner */
 .reorder-banner {
-  background: linear-gradient(135deg, rgba(139, 22, 249, 0.08), rgba(86, 53, 245, 0.08));
-  border: 1.5px dashed rgba(139, 22, 249, 0.3);
+  background: linear-gradient(135deg, rgba(139, 22, 249, 0.07), rgba(86, 53, 245, 0.07));
+  border: 1.5px dashed rgba(139, 22, 249, 0.35);
   border-radius: var(--radius);
   padding: 0.625rem 1rem;
   display: flex;
@@ -494,4 +494,31 @@ canvas { max-width: 100% !important; }
   color: var(--primary);
   font-size: 0.875rem;
   font-weight: 600;
+  overflow: hidden;
+}
+
+/* Drag grip handle — smooth hover */
+[data-drag-handle] {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+/* During a drag, suppress text-selection everywhere */
+body.is-dragging,
+body.is-dragging * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* Drag ghost card elevation */
+@keyframes dragLift {
+  from { box-shadow: var(--shadow-sm); }
+  to   { box-shadow: 0 16px 48px rgba(139, 22, 249, 0.22), 0 6px 16px rgba(0,0,0,0.08); }
+}
+
+/* Smooth insertion line pulse */
+@keyframes insertionPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.65; }
 }

@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Plus, Filter, X, LayoutGrid, List, CheckSquare, Trash2,
-  ArrowUpDown, ChevronDown, SlidersHorizontal, Check, Move
+  ArrowUpDown, ChevronDown, SlidersHorizontal, Check, GripVertical
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { taskApi } from '@/services/taskApi';
@@ -388,15 +388,15 @@ export default function TasksPage() {
           {view === 'list' && (
             <button
               onClick={() => setReorderMode(v => !v)}
-              className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-semibold transition-all ${
+              className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-semibold transition-all duration-200 ${
                 reorderMode
-                  ? 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-200'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-purple-200 hover:text-purple-600'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-transparent shadow-md shadow-purple-200 scale-[1.02]'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50'
               }`}
-              title={reorderMode ? 'Finish reordering' : 'Enable drag-to-reorder'}
+              title={reorderMode ? 'Finish reordering – saves order' : 'Enable drag-to-reorder'}
             >
-              <Move className="w-4 h-4" />
-              {reorderMode ? 'Done Reordering' : 'Reorder'}
+              <GripVertical className="w-4 h-4" />
+              {reorderMode ? 'Done' : 'Reorder'}
             </button>
           )}
 
@@ -418,10 +418,11 @@ export default function TasksPage() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="reorder-banner"
+            transition={{ duration: 0.2 }}
+            className="reorder-banner overflow-hidden"
           >
-            <Move className="w-4 h-4 flex-shrink-0" />
-            <span className="flex-1">Reorder mode active — drag the handles on task cards to rearrange</span>
+            <GripVertical className="w-4 h-4 flex-shrink-0" />
+            <span className="flex-1">Reorder mode active — drag the grip handles to rearrange tasks</span>
             <button
               onClick={() => setReorderMode(false)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white text-xs font-bold rounded-lg hover:bg-purple-700 transition-colors"
