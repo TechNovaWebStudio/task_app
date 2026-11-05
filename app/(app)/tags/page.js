@@ -73,7 +73,7 @@ export default function TagsPage() {
 
   if (loading) {
     return (
-      <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto space-y-6">
+      <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto space-y-6 w-full pb-24 lg:pb-8">
         <div className="flex flex-col items-center justify-center h-64 gap-3">
           <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
           <p className="text-sm text-gray-500 font-medium">Loading tags...</p>

@@ -56,12 +56,12 @@ export default function ActivityPage() {
   });
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-3xl mx-auto w-full pb-20 lg:pb-6">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-3xl mx-auto w-full pb-24 lg:pb-8">
       {/* Premium Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-1">
           <div className="w-1 h-6 bg-gradient-to-b from-purple-600 to-indigo-600 rounded-full" />
-          <h1 className="text-2xl font-bold text-gray-900">Activity Log</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">Activity Log</h1>
         </div>
         <p className="text-gray-500 text-sm ml-4">Track all your recent actions and task changes.</p>
       </div>

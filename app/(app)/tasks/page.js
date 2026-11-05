@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Plus, Filter, X, LayoutGrid, List, CheckSquare, Trash2,
-  ArrowUpDown, ChevronDown, SlidersHorizontal, Check, GripVertical
+  ArrowUpDown, ChevronDown, SlidersHorizontal, Check, GripVertical,
+  RotateCcw, Save
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { taskApi } from '@/services/taskApi';
@@ -55,14 +56,18 @@ export default function TasksPage() {
   const [selectedIds, setSelectedIds] = useState([]);
 
   const [showFilters, setShowFilters] = useState(false);
-  // view: 'list' = card list, 'grid' = grid cards
   const [view, setView] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('tasks-view') || 'list';
     }
     return 'list';
   });
+
+  // ─── Reorder mode (proper: save only on Done, Cancel restores) ───
   const [reorderMode, setReorderMode] = useState(false);
+  const [reorderTasks, setReorderTasks] = useState([]); // working copy in reorder mode
+  const originalOrderRef = useRef([]); // snapshot for Cancel
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -74,18 +79,17 @@ export default function TasksPage() {
   const [deleteTaskId, setDeleteTaskId] = useState(null);
 
   const searchTimeoutRef = useRef(null);
-  const previousTasksRef = useRef([]);
-
   const activeFilterCount = [filters.status, filters.category, filters.tags].filter(Boolean).length;
 
   const setViewAndSave = (v) => {
     setView(v);
     if (typeof window !== 'undefined') localStorage.setItem('tasks-view', v);
-    // Disable reorder mode when switching to grid
-    if (v === 'grid') setReorderMode(false);
+    if (v === 'grid' && reorderMode) cancelReorder();
   };
 
+  // Apply client-side sorting (not when reorder mode is active)
   const applySorting = (taskList) => {
+    if (reorderMode) return taskList; // respect manual order in reorder mode
     const arr = [...taskList];
     switch (sortBy) {
       case 'oldest': return arr.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
@@ -117,7 +121,8 @@ export default function TasksPage() {
       Object.keys(params).forEach(key => { if (params[key] === '') delete params[key]; });
 
       const { data } = await taskApi.getTasks(params);
-      setTasks(data.data || []);
+      const fetched = data.data || [];
+      setTasks(fetched);
       setMeta(data.meta || { total: 0, page: 1, pages: 1, limit: 100 });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load tasks. Please try again.');
@@ -162,6 +167,40 @@ export default function TasksPage() {
     setFilters({ status: '', category: '', tags: '' });
     setSearch('');
     setPage(1);
+  };
+
+  // ─── Reorder mode management ───
+  const enterReorder = () => {
+    const sorted = applySorting(tasks);
+    originalOrderRef.current = sorted;
+    setReorderTasks(sorted);
+    setReorderMode(true);
+  };
+
+  const cancelReorder = () => {
+    setReorderMode(false);
+    setReorderTasks([]);
+  };
+
+  const saveReorder = async () => {
+    setIsSavingOrder(true);
+    try {
+      const payload = reorderTasks.map((task, index) => ({ id: task._id, sortOrder: index }));
+      await taskApi.reorderTasks(payload);
+      setTasks(reorderTasks); // commit to main tasks state
+      toast.success('Task order saved successfully! 🎉');
+      setReorderMode(false);
+      setReorderTasks([]);
+    } catch (err) {
+      toast.error('Unable to save task order. Please try again.');
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
+
+  // Called by DraggableTaskList when user drops a task (local only, no save yet)
+  const handleReorderDrag = (newOrderedTasks) => {
+    setReorderTasks(newOrderedTasks);
   };
 
   // Task operations
@@ -222,20 +261,8 @@ export default function TasksPage() {
     setSelectedIds(prev => checked ? [...prev, id] : prev.filter(sid => sid !== id));
   };
 
-  const handleReorder = async (newOrderedTasks) => {
-    previousTasksRef.current = tasks;
-    setTasks(newOrderedTasks);
-    try {
-      const reorderPayload = newOrderedTasks.map((task, index) => ({ id: task._id, sortOrder: index }));
-      await taskApi.reorderTasks(reorderPayload);
-      toast.success('Task order saved');
-    } catch {
-      setTasks(previousTasksRef.current);
-      toast.error('Unable to save task order. Changes reverted.');
-    }
-  };
-
-  const displayTasks = applySorting(tasks);
+  // Which tasks to display (sorted, or reorder working copy)
+  const displayTasks = reorderMode ? reorderTasks : applySorting(tasks);
 
   const taskHandlers = {
     onView: (t) => { setDetailsTask(t); setShowDetailsModal(true); },
@@ -256,9 +283,8 @@ export default function TasksPage() {
     <DraggableTaskList
       tasks={groupTasks}
       {...taskHandlers}
-      onReorder={handleReorder}
+      onReorder={handleReorderDrag}
       reorderMode={reorderMode}
-      onToggleReorderMode={() => setReorderMode(v => !v)}
     />
   );
 
@@ -269,7 +295,7 @@ export default function TasksPage() {
           ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
           : 'space-y-3'
         }>
-          {[1, 2, 3, 4].map(i => <LoadingSkeleton key={i} type="table" />)}
+          {[1, 2, 3, 4].map(i => <LoadingSkeleton key={i} type="task-card" />)}
         </div>
       );
     }
@@ -284,7 +310,7 @@ export default function TasksPage() {
 
       if (dateView === 'today' && !search && !filters.status) {
         emptyTitle = 'No tasks for today';
-        emptyDesc = 'You have a free schedule today!';
+        emptyDesc = 'You have a free schedule today! 🎉';
       } else if ((dateView === 'tomorrow' || dateView === 'custom') && !search && !filters.status) {
         emptyTitle = 'No tasks scheduled for this date.';
         emptyDesc = '';
@@ -317,7 +343,13 @@ export default function TasksPage() {
 
       const renderGroup = (title, groupTasks, color = 'purple') => {
         if (groupTasks.length === 0) return null;
-        const colorMap = { purple: 'bg-purple-100 text-purple-700', blue: 'bg-blue-100 text-blue-700', amber: 'bg-amber-100 text-amber-700', gray: 'bg-gray-100 text-gray-600', red: 'bg-red-100 text-red-700' };
+        const colorMap = {
+          purple: 'bg-purple-100 text-purple-700',
+          blue: 'bg-blue-100 text-blue-700',
+          amber: 'bg-amber-100 text-amber-700',
+          gray: 'bg-gray-100 text-gray-600',
+          red: 'bg-red-100 text-red-700'
+        };
         return (
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-3 px-1">
@@ -350,13 +382,16 @@ export default function TasksPage() {
   };
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-5 pb-24 lg:pb-8 w-full max-w-7xl mx-auto">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4 pb-24 lg:pb-8 w-full max-w-7xl mx-auto">
 
       {/* ─── Page Header ─── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">Tasks</h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Manage and organize your schedule.</p>
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-7 bg-gradient-to-b from-purple-600 to-indigo-600 rounded-full" />
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">Tasks</h1>
+          </div>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5 ml-3">Manage and organize your schedule.</p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -384,23 +419,19 @@ export default function TasksPage() {
             )}
           </AnimatePresence>
 
-          {/* Reorder Mode Toggle — list view only */}
-          {view === 'list' && (
+          {/* Reorder Mode — list view only */}
+          {view === 'list' && !reorderMode && (
             <button
-              onClick={() => setReorderMode(v => !v)}
-              className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-semibold transition-all duration-200 ${
-                reorderMode
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-transparent shadow-md shadow-purple-200 scale-[1.02]'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50'
-              }`}
-              title={reorderMode ? 'Finish reordering – saves order' : 'Enable drag-to-reorder'}
+              onClick={enterReorder}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-semibold transition-all duration-200 bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50"
+              title="Enable drag-to-reorder"
             >
               <GripVertical className="w-4 h-4" />
-              {reorderMode ? 'Done' : 'Reorder'}
+              <span className="hidden xs:inline">Reorder</span>
             </button>
           )}
 
-          {/* Add Task */}
+          {/* Add Task — hidden on mobile (FAB handles it) */}
           <button
             onClick={() => setShowAddModal(true)}
             className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl text-sm font-bold hover:from-purple-700 hover:to-indigo-700 shadow-md shadow-purple-200 transition-all hover:shadow-lg"
@@ -419,17 +450,36 @@ export default function TasksPage() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="reorder-banner overflow-hidden"
+            className="overflow-hidden"
           >
-            <GripVertical className="w-4 h-4 flex-shrink-0" />
-            <span className="flex-1">Reorder mode active — drag the grip handles to rearrange tasks</span>
-            <button
-              onClick={() => setReorderMode(false)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white text-xs font-bold rounded-lg hover:bg-purple-700 transition-colors"
-            >
-              <Check className="w-3.5 h-3.5" />
-              Done
-            </button>
+            <div className="reorder-banner flex-wrap gap-3">
+              <GripVertical className="w-4 h-4 flex-shrink-0" />
+              <span className="flex-1 text-sm">
+                Reorder mode — drag the <strong>grip handles</strong> to rearrange, then save.
+              </span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={cancelReorder}
+                  disabled={isSavingOrder}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-purple-200 text-purple-700 text-xs font-bold rounded-lg hover:bg-purple-50 transition-colors disabled:opacity-50"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Cancel
+                </button>
+                <button
+                  onClick={saveReorder}
+                  disabled={isSavingOrder}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white text-xs font-bold rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-60"
+                >
+                  {isSavingOrder ? (
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Check className="w-3.5 h-3.5" />
+                  )}
+                  {isSavingOrder ? 'Saving...' : 'Done'}
+                </button>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -455,7 +505,7 @@ export default function TasksPage() {
           </div>
 
           {/* Right toolbar controls */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
             {/* Filter button */}
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -474,20 +524,22 @@ export default function TasksPage() {
               )}
             </button>
 
-            {/* Sort */}
-            <div className="relative">
-              <select
-                value={sortBy}
-                onChange={e => setSortBy(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 cursor-pointer"
-                title="Sort tasks"
-              >
-                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-            </div>
+            {/* Sort — hidden in reorder mode */}
+            {!reorderMode && (
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value)}
+                  className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 cursor-pointer"
+                  title="Sort tasks"
+                >
+                  {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+              </div>
+            )}
 
-            {/* View toggle — List vs Grid */}
+            {/* View toggle */}
             <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200">
               <button
                 onClick={() => setViewAndSave('list')}
@@ -553,7 +605,7 @@ export default function TasksPage() {
                     </select>
                   </div>
 
-                  {/* Tags search */}
+                  {/* Tags */}
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wide">Tags</label>
                     <input
@@ -566,7 +618,7 @@ export default function TasksPage() {
                   </div>
                 </div>
 
-                {/* Active filter chips + Reset */}
+                {/* Active filter chips */}
                 {activeFilterCount > 0 && (
                   <div className="flex items-center gap-2 mt-3 flex-wrap">
                     {filters.status && (
@@ -599,12 +651,12 @@ export default function TasksPage() {
       </div>
 
       {/* ─── Date Filter Tabs ─── */}
-      <div className="flex items-center gap-2 overflow-x-auto scroll-x pb-1 -mb-1">
+      <div className="flex items-center gap-1.5 overflow-x-auto scroll-x pb-1 -mb-1">
         {DATE_TABS.map(tab => (
           <button
             key={tab.key}
             onClick={() => { setDateView(tab.key); setPage(1); }}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex-shrink-0 ${
+            className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex-shrink-0 ${
               dateView === tab.key
                 ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-200'
                 : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-purple-200'
@@ -621,19 +673,19 @@ export default function TasksPage() {
             type="date"
             value={customDate}
             onChange={e => { setCustomDate(e.target.value); setDateView('custom'); setPage(1); }}
-            className="text-xs border-none focus:ring-0 outline-none text-gray-700 font-semibold bg-transparent w-32 sm:w-auto"
+            className="text-xs border-none focus:ring-0 outline-none text-gray-700 font-semibold bg-transparent w-28 sm:w-auto"
           />
         </div>
       </div>
 
       {/* ─── Task Count ─── */}
       {!loading && tasks.length > 0 && (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between px-1">
           <p className="text-xs text-gray-500 font-medium">
             {tasks.length} task{tasks.length !== 1 ? 's' : ''} found
           </p>
           <p className="text-xs text-gray-400">
-            {view === 'grid' ? 'Grid View' : 'List View'}
+            {view === 'grid' ? 'Grid View' : reorderMode ? '📌 Reorder Mode' : 'List View'}
           </p>
         </div>
       )}

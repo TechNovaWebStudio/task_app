@@ -133,8 +133,8 @@ export default function TaskGridCard({ task, onView, onEdit, onDelete, onComplet
           </span>
         </div>
 
-        {/* Hover Action Icons */}
-        <div className="absolute top-3 right-3 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm rounded-lg p-0.5 border border-gray-100 shadow-sm">
+        {/* Action Icons — always visible on mobile, hover on desktop */}
+        <div className="absolute top-3 right-3 flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm rounded-lg p-0.5 border border-gray-100 shadow-sm">
           <button
             onClick={() => onView(task)}
             className="p-1.5 text-gray-400 hover:text-purple-600 rounded-lg hover:bg-purple-50 transition-colors"

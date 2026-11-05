@@ -115,7 +115,7 @@ export default function ProfilePage() {
       {/* Page Heading */}
       <div className="flex items-center gap-3">
         <div className="w-1 h-8 bg-gradient-to-b from-purple-600 to-indigo-600 rounded-full" />
-        <h1 className="text-2xl font-bold text-gray-800">My Profile</h1>
+        <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">My Profile</h1>
       </div>
       
       <div className="flex flex-col lg:flex-row gap-6">

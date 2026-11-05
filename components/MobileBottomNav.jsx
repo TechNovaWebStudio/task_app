@@ -20,27 +20,27 @@ export default function MobileBottomNav() {
       className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30 lg:hidden"
       style={{
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.06)',
+        boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.07)',
       }}
     >
-      <div className="flex justify-around items-stretch h-[60px] max-w-screen-sm mx-auto px-2">
+      <div className="flex justify-around items-stretch h-[62px]">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center flex-1 gap-0.5 py-2 relative transition-all duration-200 rounded-xl mx-0.5 ${
+              className={`flex flex-col items-center justify-center flex-1 gap-0.5 py-2 relative transition-all duration-200 ${
                 isActive ? 'text-purple-600' : 'text-gray-400 hover:text-gray-600'
               }`}
             >
-              {/* Active indicator bar */}
+              {/* Active top bar indicator */}
               {isActive && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full" />
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-[3px] bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full" />
               )}
 
-              {/* Icon with active background */}
-              <div className={`relative flex items-center justify-center w-8 h-7 rounded-xl transition-all duration-200 ${
+              {/* Icon with pill background when active */}
+              <div className={`flex items-center justify-center w-9 h-7 rounded-xl transition-all duration-200 ${
                 isActive ? 'bg-purple-100' : ''
               }`}>
                 <item.icon className={`w-5 h-5 flex-shrink-0 transition-all ${
@@ -48,7 +48,7 @@ export default function MobileBottomNav() {
                 }`} />
               </div>
 
-              <span className={`text-[10px] font-semibold leading-tight transition-colors ${
+              <span className={`text-[9px] font-semibold leading-tight tracking-wide transition-colors ${
                 isActive ? 'text-purple-600' : 'text-gray-400'
               }`}>
                 {item.label}

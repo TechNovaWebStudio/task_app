@@ -147,8 +147,8 @@ export default function TaskCard({ task, onView, onEdit, onDelete, onComplete, s
             </span>
           </div>
 
-          {/* Right: action icons */}
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Right: action icons — always visible on mobile, hover on desktop */}
+          <div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
             <button
               onClick={() => onView(task)}
               className="p-1.5 text-gray-400 hover:text-purple-600 rounded-lg hover:bg-purple-50 transition-colors"

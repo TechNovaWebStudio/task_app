@@ -77,12 +77,12 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-4xl mx-auto w-full pb-20 lg:pb-6">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-4xl mx-auto w-full pb-24 lg:pb-8">
       {/* Premium Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div className="flex items-center gap-3">
           <div className="w-1 h-6 bg-gradient-to-b from-purple-600 to-indigo-600 rounded-full" />
-          <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">Notifications</h1>
           {meta.unreadCount > 0 && (
             <span className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-0.5 px-3 rounded-full text-xs font-semibold shadow-sm">
               {meta.unreadCount} unread

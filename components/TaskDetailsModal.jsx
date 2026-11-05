@@ -33,7 +33,7 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onEdit, onComp
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -42,10 +42,11 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onEdit, onComp
           onClick={onClose}
         />
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-white rounded-2xl w-full max-w-2xl z-10 shadow-xl overflow-hidden max-h-[90vh] flex flex-col"
+          initial={{ opacity: 0, y: '100%' }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: '100%' }}
+          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          className="bg-white w-full sm:max-w-2xl z-10 shadow-xl overflow-hidden max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-2xl"
         >
           {/* Header */}
           <div className="flex justify-between items-start p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-indigo-50">

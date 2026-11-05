@@ -102,5 +102,37 @@ export default function LoadingSkeleton({ type = 'page', rows = 5 }) {
     );
   }
 
+  if (type === 'task-card') {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 animate-pulse relative overflow-hidden">
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-200 rounded-l-2xl" />
+        <div className="pl-3 space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="w-5 h-5 bg-gray-200 rounded-full flex-shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-3/5" />
+              <div className="h-3 bg-gray-200 rounded w-4/5" />
+              <div className="flex gap-1.5 mt-1">
+                <div className="h-5 bg-gray-200 rounded-full w-14" />
+                <div className="h-5 bg-gray-200 rounded-full w-14" />
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+            <div className="flex gap-2">
+              <div className="h-5 bg-gray-200 rounded-full w-16" />
+              <div className="h-5 bg-gray-200 rounded-full w-14" />
+            </div>
+            <div className="flex gap-1">
+              <div className="w-7 h-7 bg-gray-200 rounded-lg" />
+              <div className="w-7 h-7 bg-gray-200 rounded-lg" />
+              <div className="w-7 h-7 bg-gray-200 rounded-lg" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return null;
 }

@@ -490,6 +490,7 @@ canvas { max-width: 100% !important; }
   padding: 0.625rem 1rem;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
   color: var(--primary);
   font-size: 0.875rem;
@@ -521,4 +522,38 @@ body.is-dragging * {
 @keyframes insertionPulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.65; }
+}
+
+/* ========================================
+   DND-KIT DRAG OVERLAY
+   ======================================== */
+/* Prevent body scroll during active drag on touch */
+body.is-dragging {
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* DragOverlay portal — make sure it's above everything */
+[data-dnd-overlay] {
+  z-index: 9999 !important;
+}
+
+/* ========================================
+   TOUCH IMPROVEMENTS
+   ======================================== */
+/* Prevent callout / text selection during drag */
+[data-drag-handle],
+[role="button"][tabindex] {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ========================================
+   XS BREAKPOINT (320-479px)
+   ======================================== */
+@media (min-width: 480px) {
+  .xs\:inline { display: inline; }
+  .xs\:flex   { display: flex; }
+  .xs\:hidden { display: none; }
 }
